@@ -28,152 +28,179 @@ class StockTakingPage extends StatelessWidget {
         centerTitle: true,
         backgroundColor: AppColor.primaryColor,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Container(
-              margin: EdgeInsets.all(8),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15.r),
-                color: Color(0x1a4eb0de),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-                child: TextField(
-                  controller: scanController,
-                  decoration: InputDecoration(
-                    fillColor: Colors.white,
-                    filled: true,
-                    labelText: "Scan Area",
-                    labelStyle: TextStyle(color: AppColor.secondaryColor),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25.r),
-                      borderSide: BorderSide(color: AppColor.primaryColor),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(Icons.scanner, color: AppColor.secondaryColor),
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const BarcodeScannerPage(),
-                          ),
-                        );
-
-                        if (result != null) {
-                          scanController.text = result;
-                        }
-                      },
-                    ),
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColor.primaryColor),
-                      borderRadius: BorderRadius.circular(25.r),
-                    ),
-                  ),
-                ),
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage("assets/images/background2.png"),
+                fit: BoxFit.cover,
               ),
             ),
-
-            Container(
-              margin: EdgeInsets.all(8),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15.r),
-                color: Color(0x1a4eb0de),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-                child: Column(
-                  children: [
-                    TextField(
+          ),
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                Container(
+                  margin: EdgeInsets.all(8),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(15.r),
+                    color: Color(0x1a4eb0de),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                      vertical: 20.h,
+                    ),
+                    child: TextField(
+                      controller: scanController,
                       decoration: InputDecoration(
                         fillColor: Colors.white,
                         filled: true,
-                        labelText: "Name",
+                        labelText: "Scan Area",
                         labelStyle: TextStyle(color: AppColor.secondaryColor),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(25.r),
                           borderSide: BorderSide(color: AppColor.primaryColor),
                         ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            Icons.scanner,
+                            color: AppColor.secondaryColor,
+                          ),
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const BarcodeScannerPage(),
+                              ),
+                            );
 
+                            if (result != null) {
+                              scanController.text = result;
+                            }
+                          },
+                        ),
                         border: OutlineInputBorder(
                           borderSide: BorderSide(color: AppColor.primaryColor),
                           borderRadius: BorderRadius.circular(25.r),
                         ),
                       ),
                     ),
-                    SizedBox(height: 30.h),
-                    Row(
-                      children: [
-                        Expanded(flex: 2, child: _dropDownType()),
-                        SizedBox(width: 10.w),
-                        Expanded(
-                          flex: 3,
-                          child: TextField(
-                            decoration: InputDecoration(
-                              fillColor: Colors.white,
-                              filled: true,
-                              labelText: "Quantity",
-                              labelStyle: TextStyle(
-                                color: AppColor.secondaryColor,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(25.r),
-                                borderSide: BorderSide(
-                                  color: AppColor.primaryColor,
-                                ),
-                              ),
+                  ),
+                ),
 
-                              border: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: AppColor.primaryColor,
-                                ),
-                                borderRadius: BorderRadius.circular(25.r),
+                Container(
+                  margin: EdgeInsets.all(8),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(15.r),
+                    color: Color(0x1a4eb0de),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                      vertical: 20.h,
+                    ),
+                    child: Column(
+                      children: [
+                        TextField(
+                          decoration: InputDecoration(
+                            fillColor: Colors.white,
+                            filled: true,
+                            labelText: "Name",
+                            labelStyle: TextStyle(
+                              color: AppColor.secondaryColor,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25.r),
+                              borderSide: BorderSide(
+                                color: AppColor.primaryColor,
                               ),
+                            ),
+
+                            border: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: AppColor.primaryColor,
+                              ),
+                              borderRadius: BorderRadius.circular(25.r),
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                    SizedBox(height: 25.h),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SubmitButton(
-                            label: "Approve",
-                            onPressed: () {},
-                            icon: Icons.done,
-                          ),
-                        ),
-                        SizedBox(width: 10.w),
-                        Expanded(
-                          child: SubmitButton(
-                            label: 'Delete',
-                            onPressed: () {},
-                            icon: Icons.delete,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                        SizedBox(height: 30.h),
+                        Row(
+                          children: [
+                            Expanded(flex: 2, child: _dropDownType()),
+                            SizedBox(width: 10.w),
+                            Expanded(
+                              flex: 3,
+                              child: TextField(
+                                decoration: InputDecoration(
+                                  fillColor: Colors.white,
+                                  filled: true,
+                                  labelText: "Quantity",
+                                  labelStyle: TextStyle(
+                                    color: AppColor.secondaryColor,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(25.r),
+                                    borderSide: BorderSide(
+                                      color: AppColor.primaryColor,
+                                    ),
+                                  ),
 
-            Padding(
-              padding: EdgeInsets.only(top: 100.h, left: 50.w, right: 50.w),
-              child: SizedBox(
-                height: 60.h,
-                child: SubmitButton(
-                  label: "Submit & Share",
-                  onPressed: () {},
-                  icon: Icons.save_alt,
+                                  border: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: AppColor.primaryColor,
+                                    ),
+                                    borderRadius: BorderRadius.circular(25.r),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 25.h),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SubmitButton(
+                                label: "Approve",
+                                onPressed: () {},
+                                icon: Icons.done,
+                              ),
+                            ),
+                            SizedBox(width: 10.w),
+                            Expanded(
+                              child: SubmitButton(
+                                label: 'Delete',
+                                onPressed: () {},
+                                icon: Icons.delete,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+
+                Padding(
+                  padding: EdgeInsets.only(top: 100.h, left: 50.w, right: 50.w),
+                  child: SizedBox(
+                    height: 60.h,
+                    child: SubmitButton(
+                      label: "Submit & Share",
+                      onPressed: () {},
+                      icon: Icons.save_alt,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
