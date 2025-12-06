@@ -13,7 +13,7 @@ class LoginPage extends StatelessWidget {
         children: [
           Positioned.fill(
             child: Image.asset(
-              "assets/images/background.jpg",
+              "assets/images/background.png",
               fit: BoxFit.cover,
             ),
           ),
@@ -27,7 +27,7 @@ class LoginPage extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.4),
               ),
               child: LogInWidget(
-                title: "APG Scanner",
+                title: " APG Stock Taking",
                 emailController: emailController,
                 passwordController: passwordController,
               ),

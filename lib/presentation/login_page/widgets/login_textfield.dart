@@ -1,3 +1,4 @@
+import 'package:apg_scanner/core/app_color/app_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -23,9 +24,16 @@ class LoginTextField extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           filled: true,
-          suffixIcon: Icon(icon),
+          suffixIcon: Icon(icon, color: AppColor.secondaryColor),
           fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.r)),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30.r),
+            borderSide: BorderSide(color: AppColor.primaryColor),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30.r),
+            borderSide: BorderSide(color: AppColor.primaryColor),
+          ),
         ),
       ),
     );

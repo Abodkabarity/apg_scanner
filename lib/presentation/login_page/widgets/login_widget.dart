@@ -1,6 +1,8 @@
+import 'package:apg_scanner/core/app_color/app_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../stock_taking/stock_taking_page.dart';
 import 'login_textfield.dart';
 
 class LogInWidget extends StatelessWidget {
@@ -54,7 +56,7 @@ class LogInWidget extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.bottomLeft,
 
-                colors: [Color(0xff4eb0de), Color(0xff122d40)],
+                colors: [AppColor.primaryColor, AppColor.secondaryColor],
               ),
             ),
             child: MaterialButton(
@@ -64,7 +66,12 @@ class LogInWidget extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30.r),
               ),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => StockTakingPage()),
+                );
+              },
               child: Text(
                 'Login',
                 style: TextStyle(
