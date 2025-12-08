@@ -1,8 +1,24 @@
+import 'package:apg_scanner/presentation/login_page/login_block/login_bloc.dart';
 import 'package:apg_scanner/presentation/login_page/login_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+import 'core/di/injection.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await dotenv.load(fileName: ".env");
+
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+
+  setupGetIt();
   runApp(const APGScanner());
 }
 
@@ -11,14 +27,17 @@ class APGScanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ScreenUtilInit(
-      designSize: const Size(390, 844),
-      minTextAdapt: true,
-      splitScreenMode: true,
-      builder: (context, child) {
-        return MaterialApp(debugShowCheckedModeBanner: false, home: child);
-      },
-      child: LoginPage(),
+    return BlocProvider<LoginBloc>(
+      create: (context) => getIt<LoginBloc>(),
+      child: ScreenUtilInit(
+        designSize: const Size(390, 844),
+        minTextAdapt: true,
+        splitScreenMode: true,
+        builder: (context, child) {
+          return MaterialApp(debugShowCheckedModeBanner: false, home: child);
+        },
+        child: LoginPage(),
+      ),
     );
   }
 }
