@@ -1,8 +1,8 @@
 import 'package:apg_scanner/core/app_color/app_color.dart';
+import 'package:apg_scanner/presentation/add_project/add_project_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../stock_taking/stock_taking_page.dart';
 import 'login_textfield.dart';
 
 class LogInWidget extends StatelessWidget {
@@ -69,7 +69,7 @@ class LogInWidget extends StatelessWidget {
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => StockTakingPage()),
+                  MaterialPageRoute(builder: (context) => AddProjectPage()),
                 );
               },
               child: Text(

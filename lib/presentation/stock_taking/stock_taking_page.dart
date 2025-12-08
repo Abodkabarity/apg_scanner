@@ -1,7 +1,10 @@
 import 'package:apg_scanner/core/app_color/app_color.dart';
+import 'package:apg_scanner/core/app_images/app_images.dart';
 import 'package:apg_scanner/presentation/stock_taking/widgets/barcode_scanner_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+import '../widgets/background_widget.dart';
 
 class StockTakingPage extends StatelessWidget {
   StockTakingPage({super.key});
@@ -15,7 +18,7 @@ class StockTakingPage extends StatelessWidget {
       appBar: AppBar(
         leading: Padding(
           padding: const EdgeInsets.only(left: 20),
-          child: Image.asset("assets/images/logo.png", fit: BoxFit.cover),
+          child: Image.asset(AppImages.logo, fit: BoxFit.cover),
         ),
         title: Text(
           "Stock Taking App",
@@ -30,14 +33,7 @@ class StockTakingPage extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/images/background2.png"),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
+          BackGroundWidget(),
           SingleChildScrollView(
             child: Column(
               children: [
