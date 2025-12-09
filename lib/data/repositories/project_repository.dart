@@ -33,7 +33,7 @@ class ProjectRepository {
     return newProject;
   }
 
-  Future<void> deleteProject(int id) async {
+  Future<void> deleteProject(String id) async {
     projects.removeWhere((p) => p.id == id);
     await local.saveProjects(projects);
   }

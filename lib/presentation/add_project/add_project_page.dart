@@ -32,110 +32,189 @@ class AddProjectPage extends StatelessWidget {
         centerTitle: true,
       ),
 
-      body: Stack(
-        children: [
-          BackGroundWidget(),
-          BlocBuilder<ProjectBloc, ProjectState>(
-            builder: (context, state) {
-              return Column(
-                children: [
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: state.projects.length,
-                      itemBuilder: (context, i) => ListProjectWidget(
-                        projectName: state.projects[i].name,
-                        id: "${state.projects[i].id}",
-                        onDelete: () {},
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 200.h),
-                    child: MaterialButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (dialogContext) => AlertDialog(
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  "Add New Project",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 20.sp,
-                                    color: AppColor.secondaryColor,
-                                  ),
-                                ),
-                                SizedBox(height: 10.h),
-                                TextField(
-                                  controller: projectController,
-                                  decoration: InputDecoration(
-                                    labelText: "Add New Project",
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(15.r),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: 10.h),
-                                SizedBox(height: 10.h),
-                                MaterialButton(
-                                  onPressed: () {
-                                    dialogContext.read<ProjectBloc>().add(
-                                      CreateProjectEvent(
-                                        projectController.text.trim(),
-                                      ),
-                                    );
-
-                                    // print(projectController.text);
-                                    print(state.projects);
-                                    Navigator.pop(context);
-                                  },
-                                  color: AppColor.primaryColor,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25.r),
-                                  ),
-                                  minWidth: 150.w,
-                                  child: Text(
-                                    "Add",
-                                    style: TextStyle(
-                                      color: AppColor.secondaryColor,
-                                      fontSize: 18.sp,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                      minWidth: 200.w,
-                      height: 50.h,
-                      color: AppColor.primaryColor,
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(color: AppColor.secondaryColor),
-                        borderRadius: BorderRadius.circular(25.r),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            "Add Project",
-                            style: TextStyle(
-                              color: AppColor.secondaryColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16.sp,
-                            ),
-                          ),
-                          SizedBox(width: 10.w),
-                          Icon(Icons.add, size: 25),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+      body: BlocListener<ProjectBloc, ProjectState>(
+        listener: (context, state) {
+          if (state.createSuccess) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => StockTakingPage()),
               );
-            },
+            });
+          }
+        },
+        child: Stack(
+          children: [
+            BackGroundWidget(),
+            BlocBuilder<ProjectBloc, ProjectState>(
+              builder: (context, state) {
+                return Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: state.projects.length,
+                        itemBuilder: (context, i) => ListProjectWidget(
+                          projectName: state.projects[i].name,
+                          onDelete: () {
+                            showDialog(
+                              context: context,
+                              builder: (dialogContext) => AlertDialog(
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      "Are you sure to delete ${state.projects[i].name} project?",
+                                      style: TextStyle(
+                                        fontSize: 18.sp,
+                                        color: AppColor.secondaryColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8.h),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: DialogDeleteButton(
+                                            onPressed: () {
+                                              dialogContext
+                                                  .read<ProjectBloc>()
+                                                  .add(
+                                                    DeleteProjectEvent(
+                                                      state.projects[i].id,
+                                                    ),
+                                                  );
+                                              dialogContext
+                                                  .read<ProjectBloc>()
+                                                  .add(LoadProjectsEvent());
+                                              Navigator.pop(dialogContext);
+                                            },
+                                            label: "Yes",
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                        SizedBox(width: 5.w),
+                                        Expanded(
+                                          child: DialogDeleteButton(
+                                            onPressed: () {
+                                              Navigator.pop(dialogContext);
+                                            },
+                                            label: "No",
+                                            color: Colors.green,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 200.h),
+                      child: MaterialButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) => AddProjectDialog(
+                              projectController: projectController,
+                              onPressed: () {
+                                if (projectController.text.isNotEmpty) {
+                                  dialogContext.read<ProjectBloc>().add(
+                                    CreateProjectEvent(
+                                      projectController.text.trim(),
+                                    ),
+                                  );
+                                }
+                                Navigator.pop(dialogContext);
+                                projectController.clear();
+                              },
+                            ),
+                          );
+                        },
+                        minWidth: 200.w,
+                        height: 50.h,
+                        color: AppColor.primaryColor,
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(color: AppColor.secondaryColor),
+                          borderRadius: BorderRadius.circular(25.r),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "Add Project",
+                              style: TextStyle(
+                                color: AppColor.secondaryColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16.sp,
+                              ),
+                            ),
+                            SizedBox(width: 10.w),
+                            Icon(Icons.add, size: 25),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AddProjectDialog extends StatelessWidget {
+  const AddProjectDialog({
+    super.key,
+    required this.projectController,
+    required this.onPressed,
+  });
+
+  final TextEditingController projectController;
+  final void Function() onPressed;
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            "Add New Project",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20.sp,
+              color: AppColor.secondaryColor,
+            ),
+          ),
+          SizedBox(height: 10.h),
+          TextField(
+            controller: projectController,
+            decoration: InputDecoration(
+              labelText: "Add New Project",
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15.r),
+              ),
+            ),
+          ),
+          SizedBox(height: 10.h),
+          SizedBox(height: 10.h),
+          MaterialButton(
+            onPressed: onPressed,
+            color: AppColor.primaryColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25.r),
+            ),
+            minWidth: 150.w,
+            child: Text(
+              "Add",
+              style: TextStyle(color: AppColor.secondaryColor, fontSize: 18.sp),
+            ),
           ),
         ],
       ),
@@ -147,11 +226,10 @@ class ListProjectWidget extends StatelessWidget {
   const ListProjectWidget({
     super.key,
     required this.projectName,
-    required this.id,
     required this.onDelete,
   });
   final String projectName;
-  final String id;
+
   final void Function() onDelete;
   @override
   Widget build(BuildContext context) {
@@ -164,7 +242,7 @@ class ListProjectWidget extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        leading: Text(id, style: TextStyle(color: AppColor.secondaryColor)),
+        leading: Icon(Icons.folder, color: AppColor.secondaryColor),
         trailing: IconButton(
           onPressed: onDelete,
           icon: Icon(Icons.delete, color: AppColor.secondaryColor),
@@ -175,6 +253,33 @@ class ListProjectWidget extends StatelessWidget {
             MaterialPageRoute(builder: (context) => StockTakingPage()),
           );
         },
+      ),
+    );
+  }
+}
+
+class DialogDeleteButton extends StatelessWidget {
+  const DialogDeleteButton({
+    super.key,
+    required this.onPressed,
+    required this.label,
+    required this.color,
+  });
+  final void Function() onPressed;
+  final String label;
+  final Color color;
+  @override
+  Widget build(BuildContext context) {
+    return MaterialButton(
+      onPressed: onPressed,
+      color: color,
+      child: Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: AppColor.secondaryColor,
+          fontSize: 16.sp,
+        ),
       ),
     );
   }

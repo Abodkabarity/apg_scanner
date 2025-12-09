@@ -4,14 +4,21 @@ import '../../../data/model/project_model.dart';
 
 class ProjectState extends Equatable {
   final bool loading;
-  final bool success;
+
+  final bool createSuccess;
+
+  final bool deleteSuccess;
+
   final String? error;
+
   final ProjectModel? project;
+
   final List<ProjectModel> projects;
 
   const ProjectState({
     this.loading = false,
-    this.success = false,
+    this.createSuccess = false,
+    this.deleteSuccess = false,
     this.error,
     this.project,
     this.projects = const [],
@@ -19,14 +26,16 @@ class ProjectState extends Equatable {
 
   ProjectState copyWith({
     bool? loading,
-    bool? success,
+    bool? createSuccess,
+    bool? deleteSuccess,
     String? error,
     ProjectModel? project,
     List<ProjectModel>? projects,
   }) {
     return ProjectState(
       loading: loading ?? this.loading,
-      success: success ?? this.success,
+      createSuccess: createSuccess ?? false,
+      deleteSuccess: deleteSuccess ?? false,
       error: error,
       project: project ?? this.project,
       projects: projects ?? this.projects,
@@ -34,5 +43,12 @@ class ProjectState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [loading, success, error, project, projects];
+  List<Object?> get props => [
+    loading,
+    createSuccess,
+    deleteSuccess,
+    error,
+    project,
+    projects,
+  ];
 }

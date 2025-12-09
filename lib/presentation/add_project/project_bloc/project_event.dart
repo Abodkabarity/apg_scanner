@@ -23,6 +23,6 @@ class ClearProjectEvent extends ProjectEvent {}
 class LoadProjectsEvent extends ProjectEvent {}
 
 class DeleteProjectEvent extends ProjectEvent {
-  final int id;
+  final String id;
   const DeleteProjectEvent(this.id);
 }
