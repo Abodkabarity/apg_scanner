@@ -6,21 +6,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/di/injection.dart';
+import 'data/model/stock_taking_model.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Hive
+  await Hive.initFlutter();
+
+  // Register Adapters (IMPORTANT!)
+  Hive.registerAdapter(StockItemModelAdapter());
+
+  // Load .env
   await dotenv.load(fileName: ".env");
 
+  // Supabase
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
+  // Dependency Injection
   setupGetIt();
+
   runApp(const APGScanner());
 }
 

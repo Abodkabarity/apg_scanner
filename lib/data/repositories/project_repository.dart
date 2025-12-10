@@ -17,15 +17,12 @@ class ProjectRepository {
   }
 
   Future<ProjectModel> createProject(String name) async {
-    print("BRANCH = ${session.branch}");
-
     final newProject = ProjectModel(
       id: const Uuid().v4(),
       name: name,
       branch: session.branch!,
       createdAt: DateTime.now(),
     );
-    print("   errer $name");
     projects.add(newProject);
 
     await local.saveProjects(projects);

@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/injection.dart';
 import '../../../core/session/user_session.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/products_repository.dart';
 import 'login_event.dart';
 import 'login_state.dart';
 
@@ -30,6 +31,8 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         email: profile['email'],
         branch: profile['branch_name'],
       );
+      final productsRepo = getIt<ProductsRepository>();
+      // await productsRepo.syncProducts();
       emit(state.copyWith(isLoading: false, isSuccess: true));
     } catch (e) {
       emit(

@@ -20,7 +20,6 @@ class LoginPage extends StatelessWidget {
     return Scaffold(
       body: BlocListener<LoginBloc, LoginState>(
         listener: (context, state) {
-          // TODO: implement listener
           if (state.isLoading) {
             showDialog(
               context: context,

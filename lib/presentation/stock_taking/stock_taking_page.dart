@@ -1,202 +1,238 @@
 import 'package:apg_scanner/core/app_color/app_color.dart';
 import 'package:apg_scanner/core/app_images/app_images.dart';
+import 'package:apg_scanner/data/model/project_model.dart';
+import 'package:apg_scanner/presentation/stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
+import 'package:apg_scanner/presentation/stock_taking/stock_taking_bloc/stock_taking_event.dart';
+import 'package:apg_scanner/presentation/stock_taking/stock_taking_bloc/stock_taking_state.dart';
 import 'package:apg_scanner/presentation/stock_taking/widgets/barcode_scanner_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../widgets/background_widget.dart';
 
 class StockTakingPage extends StatelessWidget {
-  StockTakingPage({super.key});
+  StockTakingPage({super.key, required this.projects});
+  final ProjectModel projects;
   final List<String> type = ["Box", "Strip"];
   final TextEditingController scanController = TextEditingController();
+  final TextEditingController nameController = TextEditingController();
 
   String? selectItem;
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 20),
-          child: Image.asset(AppImages.logo, fit: BoxFit.cover),
-        ),
-        title: Text(
-          "Stock Taking App",
-          style: TextStyle(
-            fontSize: 25.sp,
-            fontWeight: FontWeight.bold,
-            color: AppColor.secondaryColor,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: AppColor.primaryColor,
-      ),
-      body: Stack(
-        children: [
-          BackGroundWidget(),
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                Container(
-                  margin: EdgeInsets.all(8),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15.r),
-                    color: Color(0x1a4eb0de),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 20.w,
-                      vertical: 20.h,
-                    ),
-                    child: TextField(
-                      controller: scanController,
-                      decoration: InputDecoration(
-                        fillColor: Colors.white,
-                        filled: true,
-                        labelText: "Scan Area",
-                        labelStyle: TextStyle(color: AppColor.secondaryColor),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25.r),
-                          borderSide: BorderSide(color: AppColor.primaryColor),
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            Icons.scanner,
-                            color: AppColor.secondaryColor,
-                          ),
-                          onPressed: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const BarcodeScannerPage(),
-                              ),
-                            );
+    print("Project name: ${projects.name}");
+    return BlocListener<StockBloc, StockState>(
+      listener: (context, state) {
+        if (state.currentProduct != null) {
+          nameController.text = state.currentProduct!.itemName;
+        }
 
-                            if (result != null) {
-                              scanController.text = result;
-                            }
-                          },
-                        ),
-                        border: OutlineInputBorder(
-                          borderSide: BorderSide(color: AppColor.primaryColor),
-                          borderRadius: BorderRadius.circular(25.r),
+        if (state.error != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.error!)));
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: Image.asset(AppImages.logo, fit: BoxFit.cover),
+          ),
+          title: Text(
+            "Stock Taking App",
+            style: TextStyle(
+              fontSize: 25.sp,
+              fontWeight: FontWeight.bold,
+              color: AppColor.secondaryColor,
+            ),
+          ),
+          centerTitle: true,
+          backgroundColor: AppColor.primaryColor,
+        ),
+        body: Stack(
+          children: [
+            BackGroundWidget(),
+            SingleChildScrollView(
+              child: Column(
+                children: [
+                  Container(
+                    margin: EdgeInsets.all(8),
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(15.r),
+                      color: Color(0x1a4eb0de),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20.w,
+                        vertical: 20.h,
+                      ),
+                      child: TextField(
+                        controller: scanController,
+                        decoration: InputDecoration(
+                          fillColor: Colors.white,
+                          filled: true,
+                          labelText: "Scan Area",
+                          labelStyle: TextStyle(color: AppColor.secondaryColor),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25.r),
+                            borderSide: BorderSide(
+                              color: AppColor.primaryColor,
+                            ),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.scanner),
+                            onPressed: () async {
+                              final barcode = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const BarcodeScannerPage(),
+                                ),
+                              );
+                              print("📸 SCAN RESULT FROM CAMERA = $barcode");
+
+                              if (barcode != null) {
+                                scanController.text = barcode;
+
+                                context.read<StockBloc>().add(
+                                  ScanBarcodeEvent(
+                                    projectId: projects.id.toString(),
+                                    barcode: barcode,
+                                  ),
+                                );
+                              }
+                              nameController.clear();
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: AppColor.primaryColor,
+                            ),
+                            borderRadius: BorderRadius.circular(25.r),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
-                Container(
-                  margin: EdgeInsets.all(8),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15.r),
-                    color: Color(0x1a4eb0de),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 20.w,
-                      vertical: 20.h,
+                  Container(
+                    margin: EdgeInsets.all(8),
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(15.r),
+                      color: Color(0x1a4eb0de),
                     ),
-                    child: Column(
-                      children: [
-                        TextField(
-                          decoration: InputDecoration(
-                            fillColor: Colors.white,
-                            filled: true,
-                            labelText: "Name",
-                            labelStyle: TextStyle(
-                              color: AppColor.secondaryColor,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(25.r),
-                              borderSide: BorderSide(
-                                color: AppColor.primaryColor,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20.w,
+                        vertical: 20.h,
+                      ),
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: nameController,
+                            decoration: InputDecoration(
+                              fillColor: Colors.white,
+                              filled: true,
+                              labelText: "Name",
+                              labelStyle: TextStyle(
+                                color: AppColor.secondaryColor,
                               ),
-                            ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25.r),
+                                borderSide: BorderSide(
+                                  color: AppColor.primaryColor,
+                                ),
+                              ),
 
-                            border: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: AppColor.primaryColor,
+                              border: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: AppColor.primaryColor,
+                                ),
+                                borderRadius: BorderRadius.circular(25.r),
                               ),
-                              borderRadius: BorderRadius.circular(25.r),
                             ),
                           ),
-                        ),
-                        SizedBox(height: 30.h),
-                        Row(
-                          children: [
-                            Expanded(flex: 2, child: _dropDownType()),
-                            SizedBox(width: 10.w),
-                            Expanded(
-                              flex: 3,
-                              child: TextField(
-                                decoration: InputDecoration(
-                                  fillColor: Colors.white,
-                                  filled: true,
-                                  labelText: "Quantity",
-                                  labelStyle: TextStyle(
-                                    color: AppColor.secondaryColor,
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(25.r),
-                                    borderSide: BorderSide(
-                                      color: AppColor.primaryColor,
+                          SizedBox(height: 30.h),
+                          Row(
+                            children: [
+                              Expanded(flex: 2, child: _dropDownType()),
+                              SizedBox(width: 10.w),
+                              Expanded(
+                                flex: 3,
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    fillColor: Colors.white,
+                                    filled: true,
+                                    labelText: "Quantity",
+                                    labelStyle: TextStyle(
+                                      color: AppColor.secondaryColor,
                                     ),
-                                  ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(25.r),
+                                      borderSide: BorderSide(
+                                        color: AppColor.primaryColor,
+                                      ),
+                                    ),
 
-                                  border: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: AppColor.primaryColor,
+                                    border: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: AppColor.primaryColor,
+                                      ),
+                                      borderRadius: BorderRadius.circular(25.r),
                                     ),
-                                    borderRadius: BorderRadius.circular(25.r),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 25.h),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: SubmitButton(
-                                label: "Approve",
-                                onPressed: () {},
-                                icon: Icons.done,
+                            ],
+                          ),
+                          SizedBox(height: 25.h),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: SubmitButton(
+                                  label: "Approve",
+                                  onPressed: () {},
+                                  icon: Icons.done,
+                                ),
                               ),
-                            ),
-                            SizedBox(width: 10.w),
-                            Expanded(
-                              child: SubmitButton(
-                                label: 'Delete',
-                                onPressed: () {},
-                                icon: Icons.delete,
+                              SizedBox(width: 10.w),
+                              Expanded(
+                                child: SubmitButton(
+                                  label: 'Delete',
+                                  onPressed: () {},
+                                  icon: Icons.delete,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-                Padding(
-                  padding: EdgeInsets.only(top: 100.h, left: 50.w, right: 50.w),
-                  child: SizedBox(
-                    height: 60.h,
-                    child: SubmitButton(
-                      label: "Submit & Share",
-                      onPressed: () {},
-                      icon: Icons.save_alt,
+                  Padding(
+                    padding: EdgeInsets.only(
+                      top: 100.h,
+                      left: 50.w,
+                      right: 50.w,
+                    ),
+                    child: SizedBox(
+                      height: 60.h,
+                      child: SubmitButton(
+                        label: "Submit & Share",
+                        onPressed: () {},
+                        icon: Icons.save_alt,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

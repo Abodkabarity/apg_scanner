@@ -1,3 +1,4 @@
+import 'package:apg_scanner/data/model/project_model.dart';
 import 'package:apg_scanner/presentation/add_project/project_bloc/project_bloc.dart';
 import 'package:apg_scanner/presentation/add_project/project_bloc/project_event.dart';
 import 'package:apg_scanner/presentation/add_project/project_bloc/project_state.dart';
@@ -9,6 +10,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../core/app_color/app_color.dart';
 import '../../core/app_images/app_images.dart';
+import '../../core/di/injection.dart';
+import '../../data/repositories/products_repository.dart';
+import '../../data/repositories/stock_taking_repository.dart';
+import '../stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
+import '../stock_taking/stock_taking_bloc/stock_taking_event.dart';
 
 class AddProjectPage extends StatelessWidget {
   AddProjectPage({super.key});
@@ -38,7 +44,15 @@ class AddProjectPage extends StatelessWidget {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => StockTakingPage()),
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider(
+                    create: (_) => StockBloc(
+                      getIt<StockRepository>(),
+                      getIt<ProductsRepository>(),
+                    )..add(LoadStockEvent(state.projects.last.id)),
+                    child: StockTakingPage(projects: state.projects.last),
+                  ),
+                ),
               );
             });
           }
@@ -109,8 +123,17 @@ class AddProjectPage extends StatelessWidget {
                               ),
                             );
                           },
+                          projects: state.projects[i],
                         ),
                       ),
+                    ),
+                    MaterialButton(
+                      onPressed: () async {
+                        final list = await getIt<ProductsRepository>()
+                            .getAllLocal();
+                        print("LOCAL PRODUCTS = ${list.length}");
+                      },
+                      child: Text("Test"),
                     ),
                     Padding(
                       padding: EdgeInsets.only(bottom: 200.h),
@@ -120,7 +143,7 @@ class AddProjectPage extends StatelessWidget {
                             context: context,
                             builder: (dialogContext) => AddProjectDialog(
                               projectController: projectController,
-                              onPressed: () {
+                              onPressed: () async {
                                 if (projectController.text.isNotEmpty) {
                                   dialogContext.read<ProjectBloc>().add(
                                     CreateProjectEvent(
@@ -128,6 +151,7 @@ class AddProjectPage extends StatelessWidget {
                                     ),
                                   );
                                 }
+
                                 Navigator.pop(dialogContext);
                                 projectController.clear();
                               },
@@ -227,8 +251,10 @@ class ListProjectWidget extends StatelessWidget {
     super.key,
     required this.projectName,
     required this.onDelete,
+    required this.projects,
   });
   final String projectName;
+  final ProjectModel projects;
 
   final void Function() onDelete;
   @override
@@ -250,7 +276,15 @@ class ListProjectWidget extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => StockTakingPage()),
+            MaterialPageRoute(
+              builder: (_) => BlocProvider(
+                create: (_) => StockBloc(
+                  getIt<StockRepository>(),
+                  getIt<ProductsRepository>(),
+                )..add(LoadStockEvent(projects.id.toString())),
+                child: StockTakingPage(projects: projects),
+              ),
+            ),
           );
         },
       ),
