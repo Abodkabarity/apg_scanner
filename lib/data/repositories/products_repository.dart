@@ -7,16 +7,17 @@ class ProductsRepository {
   final ProductsRemoteService remote;
 
   List<ProductModel> _products = [];
+  Map<String, List<String>> unitIndex = {};
 
   ProductsRepository({required this.local, required this.remote});
 
-  // للقراءة من الخارج لو حبيت
   List<ProductModel> get products => _products;
 
   /// Load products from Hive
   Future<List<ProductModel>> getAllLocal() async {
     _products = await local.loadProducts();
     print("LOADED LOCAL PRODUCTS = ${_products.length}");
+    _buildUnitIndex();
     return _products;
   }
 
@@ -45,13 +46,11 @@ class ProductsRepository {
     // Save to local Hive
     await local.saveProducts(remoteList);
     _products = remoteList;
-
+    _buildUnitIndex();
     print("SYNC DONE");
   }
 
-  /// 🔥 هذه الدالة الأهم: تضمن أن المنتجات جاهزة في الذاكرة
   Future<void> ensureLoaded() async {
-    // إذا كانت موجودة بالفعل في الذاكرة لا تعمل شيء
     if (_products.isNotEmpty) {
       print("Products already in memory, skip loading.");
       return;
@@ -65,9 +64,24 @@ class ProductsRepository {
       return;
     }
 
-    // لو Hive فاضي → أول Sync من السيرفر
     print("No local products, doing first sync from Supabase...");
     await syncProducts();
+  }
+
+  void _buildUnitIndex() {
+    unitIndex.clear();
+
+    for (final p in _products) {
+      final List<String> units = [];
+
+      if (p.unit.isNotEmpty) units.add(p.unit);
+      if (p.subUnit.isNotEmpty) units.add(p.subUnit);
+
+      unitIndex[p.itemCode] = units;
+      print("BUILD: ${p.itemCode} -> ${p.unit}, ${p.subUnit}");
+    }
+
+    print("Unit Index Built → ${unitIndex.length} products");
   }
 
   /// Search product by barcode (Sync lookup)
@@ -82,5 +96,9 @@ class ProductsRepository {
       }
     }
     return null;
+  }
+
+  List<String> getUnitsForProduct(ProductModel p) {
+    return unitIndex[p.itemCode] ?? [];
   }
 }

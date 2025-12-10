@@ -17,6 +17,7 @@ Future<void> main() async {
 
   // Hive
   await Hive.initFlutter();
+  await Hive.deleteBoxFromDisk('stock_items');
 
   // Register Adapters (IMPORTANT!)
   Hive.registerAdapter(StockItemModelAdapter());

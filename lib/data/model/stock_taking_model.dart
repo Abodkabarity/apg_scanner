@@ -32,18 +32,21 @@ class StockItemModel {
   final int quantity;
 
   @HiveField(9)
-  final String barcode;
+  final num subQuantity; // 👈 تمت إضافته
 
   @HiveField(10)
-  final bool isDeleted;
+  final String barcode;
 
   @HiveField(11)
-  final bool isSynced;
+  final bool isDeleted;
 
   @HiveField(12)
-  final DateTime createdAt;
+  final bool isSynced;
 
   @HiveField(13)
+  final DateTime createdAt;
+
+  @HiveField(14)
   final DateTime updatedAt;
 
   StockItemModel({
@@ -56,6 +59,7 @@ class StockItemModel {
     required this.unit,
     required this.subUnit,
     required this.quantity,
+    required this.subQuantity, // 👈 تمت إضافته
     required this.barcode,
     required this.isDeleted,
     required this.isSynced,
@@ -73,6 +77,7 @@ class StockItemModel {
     String? unit,
     String? subUnit,
     int? quantity,
+    num? subQuantity,
     String? barcode,
     bool? isDeleted,
     bool? isSynced,
@@ -89,6 +94,7 @@ class StockItemModel {
       unit: unit ?? this.unit,
       subUnit: subUnit ?? this.subUnit,
       quantity: quantity ?? this.quantity,
+      subQuantity: subQuantity ?? this.subQuantity, // 👈 تمت إضافته
       barcode: barcode ?? this.barcode,
       isDeleted: isDeleted ?? this.isDeleted,
       isSynced: isSynced ?? this.isSynced,
@@ -108,6 +114,7 @@ class StockItemModel {
       unit: json['unit'] ?? '',
       subUnit: json['subunit'] ?? '',
       quantity: json['quantity'] ?? 0,
+      subQuantity: json['sub_quantity'] ?? 0, // 👈 تمت إضافته
       barcode: json['barcode'] ?? '',
       isDeleted: json['is_deleted'] ?? false,
       isSynced: json['is_synced'] ?? false,
@@ -127,6 +134,7 @@ class StockItemModel {
       'unit': unit,
       'subunit': subUnit,
       'quantity': quantity,
+      'sub_quantity': subQuantity, // 👈 تمت إضافته
       'barcode': barcode,
       'is_deleted': isDeleted,
       'is_synced': isSynced,
