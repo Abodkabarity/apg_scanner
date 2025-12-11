@@ -9,6 +9,7 @@ import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
 import '../../data/services/local_storage_service.dart';
 import '../../data/services/products_local_service.dart';
+import '../../data/services/products_sync_service.dart';
 import '../../data/services/stock_local_service.dart';
 import '../../data/services/supabase_service.dart';
 import '../../presentation/add_project/project_bloc/project_bloc.dart';
@@ -64,5 +65,11 @@ void setupGetIt() {
 
   getIt.registerFactory<StockBloc>(
     () => StockBloc(getIt<StockRepository>(), getIt<ProductsRepository>()),
+  );
+  getIt.registerLazySingleton<ProductsSyncService>(
+    () => ProductsSyncService(
+      getIt<ProductsRepository>(),
+      Supabase.instance.client,
+    ),
   );
 }

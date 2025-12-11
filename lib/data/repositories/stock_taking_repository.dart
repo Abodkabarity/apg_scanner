@@ -17,12 +17,28 @@ class StockRepository {
     return local.loadItems(projectId);
   }
 
-  Future<void> scanAndAdd({
+  Future<StockItemModel?> findExistingItem(
+    String projectId,
+    String itemCode,
+  ) async {
+    final items = await loadItems(projectId);
+    try {
+      return items.firstWhere((e) => e.itemCode == itemCode && !e.isDeleted);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveNewItem({
     required String projectId,
     required String barcode,
     required ProductModel product,
     required int qty,
+    required String unit,
   }) async {
+    final numberSubUnit = product.numberSubUnit;
+
+    final subQty = (unit.toLowerCase() == "box") ? qty : qty / numberSubUnit;
     final item = StockItemModel(
       id: const Uuid().v4(),
       projectId: projectId,
@@ -31,11 +47,13 @@ class StockRepository {
       itemId: product.id,
       itemCode: product.itemCode,
       itemName: product.itemName,
-      unit: product.unit,
+      unit: unit,
       subUnit: product.subUnit,
       quantity: qty,
+      subQuantity: subQty,
       isDeleted: false,
       isSynced: false,
+
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -43,11 +61,31 @@ class StockRepository {
     await local.saveOrUpdate(item);
   }
 
+  Future<void> updateItem({
+    required StockItemModel item,
+    required int qty,
+    required String unit,
+    required ProductModel product,
+  }) async {
+    final numberSubUnit = product.numberSubUnit;
+
+    final subQty = (unit.toLowerCase() == "box") ? qty : qty / numberSubUnit;
+    final updated = item.copyWith(
+      quantity: qty,
+      subQuantity: subQty,
+      unit: unit,
+      updatedAt: DateTime.now(),
+      isSynced: false,
+    );
+
+    await local.saveOrUpdate(updated);
+  }
+
   Future<void> delete(String id) async {
     await local.deleteSoft(id);
   }
 
-  Future<void> syncUp(int projectId) async {
+  Future<void> syncUp(String projectId) async {
     final dirtyItems = await local.getDirty(projectId);
     if (dirtyItems.isEmpty) return;
 
@@ -58,5 +96,28 @@ class StockRepository {
         item.copyWith(isSynced: true, updatedAt: DateTime.now()),
       );
     }
+  }
+
+  Future<void> debugPrintAll(String projectId) async {
+    final items = await local.loadItems(projectId);
+
+    print("===== DEBUG: ITEMS IN HIVE FOR PROJECT = $projectId =====");
+
+    for (final i in items) {
+      print("----------------------------------");
+      print("ID: ${i.id}");
+      print("Barcode: ${i.barcode}");
+      print("Item Code: ${i.itemCode}");
+      print("Item Name: ${i.itemName}");
+      print("Unit: ${i.unit}");
+      print("SubUnit: ${i.subUnit}");
+      print("Qty: ${i.quantity}");
+      print("Sub QTY: ${i.subQuantity}");
+      print("Synced: ${i.isSynced}");
+      print("Deleted: ${i.isDeleted}");
+      print("Created: ${i.createdAt}");
+    }
+
+    print("=========== END DEBUG ===========");
   }
 }

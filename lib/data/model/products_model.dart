@@ -4,6 +4,7 @@ class ProductModel {
   final List<String> barcodes;
   final String itemName;
   final String unit;
+  final num numberSubUnit;
   final String subUnit;
   final bool useBatch;
   final bool useExpiry;
@@ -19,6 +20,7 @@ class ProductModel {
     required this.useBatch,
     required this.useExpiry,
     required this.updatedAt,
+    required this.numberSubUnit,
   });
 
   // -------------------------
@@ -64,6 +66,7 @@ class ProductModel {
           : json['use_expiry'] == "true",
 
       updatedAt: DateTime.tryParse(json['updated_at'] ?? "") ?? DateTime.now(),
+      numberSubUnit: json['subunit_count'] ?? 1,
     );
   }
 
@@ -77,6 +80,7 @@ class ProductModel {
       'subunit': subUnit,
       'use_batch': useBatch,
       'use_expiry': useExpiry,
+      'subunit_count': numberSubUnit,
       'updated_at': updatedAt.toIso8601String(),
     };
   }

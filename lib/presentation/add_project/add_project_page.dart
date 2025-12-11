@@ -127,14 +127,7 @@ class AddProjectPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    MaterialButton(
-                      onPressed: () async {
-                        final list = await getIt<ProductsRepository>()
-                            .getAllLocal();
-                        print("LOCAL PRODUCTS = ${list.length}");
-                      },
-                      child: Text("Test"),
-                    ),
+
                     Padding(
                       padding: EdgeInsets.only(bottom: 200.h),
                       child: MaterialButton(

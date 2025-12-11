@@ -39,7 +39,7 @@ class StockLocalService {
     }
   }
 
-  Future<List<StockItemModel>> getDirty(int projectId) async {
+  Future<List<StockItemModel>> getDirty(String projectId) async {
     final box = await _openBox();
     return box.values
         .where(

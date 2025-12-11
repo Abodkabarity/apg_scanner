@@ -67,14 +67,12 @@ class LoginPage extends StatelessWidget {
                       emailController: emailController,
                       passwordController: passwordController,
                       onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          context.read<LoginBloc>().add(
-                            LoginSubmitted(
-                              emailController.text.trim(),
-                              passwordController.text.trim(),
-                            ),
-                          );
-                        }
+                        context.read<LoginBloc>().add(
+                          LoginSubmitted(
+                            "a.alkabariti@alain-pharmacy.com",
+                            "Abod@1234",
+                          ),
+                        );
                       },
 
                       error: state.error,

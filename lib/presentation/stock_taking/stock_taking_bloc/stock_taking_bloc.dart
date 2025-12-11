@@ -14,16 +14,25 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     on<ScanBarcodeEvent>(_onScan);
     on<DeleteStockEvent>(_onDelete);
     on<SyncStockEvent>(_onSync);
+
+    on<ChangeUnitEvent>((event, emit) {
+      emit(state.copyWith(selectedUnit: event.unit));
+    });
+
+    on<ApproveItemEvent>(_onApprove);
+    on<ResetFormEvent>(_onResetForm);
+
+    on<SearchQueryChanged>(_onSearchQueryChanged);
+    on<ProductChosenFromSearch>(_onProductChosenFromSearch);
   }
 
   Future<void> _onLoad(LoadStockEvent event, Emitter<StockState> emit) async {
-    emit(state.copyWith(loading: true, error: null));
+    emit(state.copyWith(loading: true));
 
     await productsRepo.ensureLoaded();
-
     final items = await repo.loadItems(event.projectId);
 
-    emit(state.copyWith(loading: false, items: items, error: null));
+    emit(state.copyWith(loading: false, items: items));
   }
 
   Future<void> _onScan(ScanBarcodeEvent event, Emitter<StockState> emit) async {
@@ -38,16 +47,76 @@ class StockBloc extends Bloc<StockEvent, StockState> {
       return;
     }
 
-    await repo.scanAndAdd(
-      projectId: event.projectId,
-      barcode: event.barcode,
-      product: product,
-      qty: 1,
+    final units = productsRepo.getUnitsForProduct(product);
+
+    emit(
+      state.copyWith(
+        loading: false,
+        currentProduct: product,
+        units: units,
+        selectedUnit: null,
+        error: null,
+        suggestions: [],
+      ),
     );
+  }
+
+  Future<void> _onApprove(
+    ApproveItemEvent event,
+    Emitter<StockState> emit,
+  ) async {
+    final product = state.currentProduct;
+
+    if (product == null) {
+      emit(state.copyWith(error: "Scan product first"));
+      return;
+    }
+
+    if (event.qty <= 0) {
+      emit(state.copyWith(error: "Quantity required"));
+      return;
+    }
+
+    if (event.unit.isEmpty) {
+      emit(state.copyWith(error: "Unit type required"));
+      return;
+    }
+
+    final existing = await repo.findExistingItem(
+      event.projectId,
+      product.itemCode,
+    );
+
+    if (existing != null) {
+      await repo.updateItem(
+        item: existing,
+        qty: event.qty,
+        unit: event.unit,
+        product: product,
+      );
+    } else {
+      await repo.saveNewItem(
+        projectId: event.projectId,
+        barcode: event.barcode,
+        product: product,
+        qty: event.qty,
+        unit: event.unit,
+      );
+    }
 
     final items = await repo.loadItems(event.projectId);
 
-    emit(state.copyWith(loading: false, items: items, currentProduct: product));
+    emit(
+      state.copyWith(
+        items: items,
+        currentProduct: null,
+        units: [],
+        selectedUnit: null,
+        success: "Item saved successfully",
+        error: null,
+        suggestions: [],
+      ),
+    );
   }
 
   Future<void> _onDelete(
@@ -63,5 +132,71 @@ class StockBloc extends Bloc<StockEvent, StockState> {
 
   Future<void> _onSync(SyncStockEvent event, Emitter<StockState> emit) async {
     await repo.syncUp(event.projectId);
+  }
+
+  Future<void> _onResetForm(
+    ResetFormEvent event,
+    Emitter<StockState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        setNullProduct: true,
+        currentProduct: null,
+        selectedUnit: null,
+        units: [],
+        success: null,
+        error: null,
+        suggestions: [],
+      ),
+    );
+  }
+
+  Future<void> _onSearchQueryChanged(
+    SearchQueryChanged event,
+    Emitter<StockState> emit,
+  ) async {
+    final text = event.query.trim();
+
+    if (text.length < 2) {
+      emit(state.copyWith(suggestions: []));
+      return;
+    }
+
+    await productsRepo.ensureLoaded();
+
+    final lower = text.toLowerCase();
+
+    final matches = productsRepo.products
+        .where((p) {
+          final name = p.itemName.toLowerCase();
+          final code = p.itemCode.toLowerCase();
+          final barcodes = p.barcodes;
+          return name.contains(lower) ||
+              code.contains(lower) ||
+              barcodes.any((b) => b.contains(text));
+        })
+        .take(10)
+        .toList();
+
+    emit(state.copyWith(suggestions: matches));
+  }
+
+  Future<void> _onProductChosenFromSearch(
+    ProductChosenFromSearch event,
+    Emitter<StockState> emit,
+  ) async {
+    final product = event.product;
+    final units = productsRepo.getUnitsForProduct(product);
+
+    emit(
+      state.copyWith(
+        currentProduct: product,
+        units: units,
+        selectedUnit: null,
+        suggestions: [],
+        error: null,
+        success: null,
+      ),
+    );
   }
 }

@@ -7,16 +7,17 @@ class ProductsRepository {
   final ProductsRemoteService remote;
 
   List<ProductModel> _products = [];
+  Map<String, List<String>> unitIndex = {};
 
   ProductsRepository({required this.local, required this.remote});
 
-  // للقراءة من الخارج لو حبيت
   List<ProductModel> get products => _products;
 
   /// Load products from Hive
   Future<List<ProductModel>> getAllLocal() async {
     _products = await local.loadProducts();
     print("LOADED LOCAL PRODUCTS = ${_products.length}");
+    _buildUnitIndex();
     return _products;
   }
 
@@ -45,13 +46,11 @@ class ProductsRepository {
     // Save to local Hive
     await local.saveProducts(remoteList);
     _products = remoteList;
-
+    _buildUnitIndex();
     print("SYNC DONE");
   }
 
-  /// 🔥 هذه الدالة الأهم: تضمن أن المنتجات جاهزة في الذاكرة
   Future<void> ensureLoaded() async {
-    // إذا كانت موجودة بالفعل في الذاكرة لا تعمل شيء
     if (_products.isNotEmpty) {
       print("Products already in memory, skip loading.");
       return;
@@ -65,9 +64,40 @@ class ProductsRepository {
       return;
     }
 
-    // لو Hive فاضي → أول Sync من السيرفر
     print("No local products, doing first sync from Supabase...");
     await syncProducts();
+  }
+
+  void _buildUnitIndex() {
+    unitIndex.clear();
+
+    for (final p in _products) {
+      final Set<String> units = {};
+
+      if (p.unit.isNotEmpty) {
+        units.add(_normalizeUnit(p.unit));
+      }
+
+      if (p.subUnit.isNotEmpty) {
+        units.add(_normalizeUnit(p.subUnit));
+      }
+
+      unitIndex[p.itemCode] = units.toList();
+    }
+    print("Unit Index Built → ${unitIndex.length} products");
+  }
+
+  String _normalizeUnit(String u) {
+    u = u.trim();
+    if (u.isEmpty) return "";
+
+    return u[0].toUpperCase() + u.substring(1).toLowerCase();
+  }
+
+  String normalize(String value) {
+    value = value.trim().toLowerCase();
+    if (value.isEmpty) return "";
+    return value[0].toUpperCase() + value.substring(1);
   }
 
   /// Search product by barcode (Sync lookup)
@@ -82,5 +112,24 @@ class ProductsRepository {
       }
     }
     return null;
+  }
+
+  List<String> getUnitsForProduct(ProductModel p) {
+    return unitIndex[p.itemCode] ?? [];
+  }
+
+  void mergeUpdatedProducts(List<ProductModel> updates) {
+    final map = {for (var p in _products) p.id: p};
+
+    for (var u in updates) {
+      map[u.id] = u; // Replace or insert
+    }
+
+    _products = map.values.toList();
+  }
+
+  void setProducts(List<ProductModel> list) {
+    _products = list;
+    _buildUnitIndex();
   }
 }
