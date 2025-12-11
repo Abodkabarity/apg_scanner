@@ -57,3 +57,13 @@ class ProductChosenFromSearch extends StockEvent {
   final ProductModel product;
   const ProductChosenFromSearch(this.product);
 }
+
+class SearchScannedItemsEvent extends StockEvent {
+  final String query;
+  SearchScannedItemsEvent(this.query);
+}
+
+class ChangeSelectedIndexEvent extends StockEvent {
+  final int index;
+  ChangeSelectedIndexEvent(this.index);
+}

@@ -26,18 +26,19 @@ class StockItemModelAdapter extends TypeAdapter<StockItemModel> {
       unit: fields[6] as String,
       subUnit: fields[7] as String,
       quantity: fields[8] as int,
-      barcode: fields[9] as String,
-      isDeleted: fields[10] as bool,
-      isSynced: fields[11] as bool,
-      createdAt: fields[12] as DateTime,
-      updatedAt: fields[13] as DateTime,
+      subQuantity: fields[9] as num,
+      barcode: fields[10] as String,
+      isDeleted: fields[11] as bool,
+      isSynced: fields[12] as bool,
+      createdAt: fields[13] as DateTime,
+      updatedAt: fields[14] as DateTime,
     );
   }
 
   @override
   void write(BinaryWriter writer, StockItemModel obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -57,14 +58,16 @@ class StockItemModelAdapter extends TypeAdapter<StockItemModel> {
       ..writeByte(8)
       ..write(obj.quantity)
       ..writeByte(9)
-      ..write(obj.barcode)
+      ..write(obj.subQuantity)
       ..writeByte(10)
-      ..write(obj.isDeleted)
+      ..write(obj.barcode)
       ..writeByte(11)
-      ..write(obj.isSynced)
+      ..write(obj.isDeleted)
       ..writeByte(12)
-      ..write(obj.createdAt)
+      ..write(obj.isSynced)
       ..writeByte(13)
+      ..write(obj.createdAt)
+      ..writeByte(14)
       ..write(obj.updatedAt);
   }
 

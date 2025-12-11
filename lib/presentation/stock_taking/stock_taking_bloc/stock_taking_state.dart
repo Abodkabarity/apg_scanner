@@ -11,6 +11,8 @@ class StockState extends Equatable {
   final String? selectedUnit;
   final String? error;
   final String? success;
+  final List<StockItemModel> filteredItems;
+  final int? selectedIndex;
 
   /// suggestions for search (auto-complete)
   final List<ProductModel> suggestions;
@@ -24,17 +26,23 @@ class StockState extends Equatable {
     this.error,
     this.success,
     this.suggestions = const [],
+    this.filteredItems = const [],
+    this.selectedIndex,
   });
 
   StockState copyWith({
     bool? loading,
     List<StockItemModel>? items,
     ProductModel? currentProduct,
-    bool setNullProduct = false, // <-- المفتاح هنا
+    bool setNullProduct = false,
     List<String>? units,
     String? selectedUnit,
+    bool setNullSelectedUnit = false,
     String? error,
     String? success,
+    List<StockItemModel>? filteredItems,
+    int? selectedIndex,
+
     List<ProductModel>? suggestions,
   }) {
     return StockState(
@@ -46,7 +54,12 @@ class StockState extends Equatable {
           : (currentProduct ?? this.currentProduct),
 
       units: units ?? this.units,
-      selectedUnit: selectedUnit ?? this.selectedUnit,
+      selectedUnit: setNullSelectedUnit
+          ? null
+          : (selectedUnit ?? this.selectedUnit),
+      filteredItems: filteredItems ?? this.filteredItems,
+      selectedIndex: selectedIndex ?? this.selectedIndex,
+
       error: error,
       success: success,
       suggestions: suggestions ?? this.suggestions,
@@ -63,5 +76,7 @@ class StockState extends Equatable {
     error,
     success,
     suggestions,
+    filteredItems,
+    selectedIndex,
   ];
 }

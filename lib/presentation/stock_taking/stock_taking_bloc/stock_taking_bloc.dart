@@ -14,6 +14,10 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     on<ScanBarcodeEvent>(_onScan);
     on<DeleteStockEvent>(_onDelete);
     on<SyncStockEvent>(_onSync);
+    on<SearchScannedItemsEvent>(_onSearchScannedItems);
+    on<ChangeSelectedIndexEvent>((event, emit) {
+      emit(state.copyWith(selectedIndex: event.index));
+    });
 
     on<ChangeUnitEvent>((event, emit) {
       emit(state.copyWith(selectedUnit: event.unit));
@@ -32,7 +36,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     await productsRepo.ensureLoaded();
     final items = await repo.loadItems(event.projectId);
 
-    emit(state.copyWith(loading: false, items: items));
+    emit(state.copyWith(loading: false, items: items, filteredItems: items));
   }
 
   Future<void> _onScan(ScanBarcodeEvent event, Emitter<StockState> emit) async {
@@ -54,6 +58,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         loading: false,
         currentProduct: product,
         units: units,
+        setNullSelectedUnit: true,
         selectedUnit: null,
         error: null,
         suggestions: [],
@@ -111,7 +116,9 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         items: items,
         currentProduct: null,
         units: [],
+        setNullSelectedUnit: true,
         selectedUnit: null,
+        filteredItems: items,
         success: "Item saved successfully",
         error: null,
         suggestions: [],
@@ -144,6 +151,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         currentProduct: null,
         selectedUnit: null,
         units: [],
+        setNullSelectedUnit: true,
         success: null,
         error: null,
         suggestions: [],
@@ -193,10 +201,30 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         currentProduct: product,
         units: units,
         selectedUnit: null,
+        setNullSelectedUnit: true,
         suggestions: [],
         error: null,
         success: null,
       ),
     );
+  }
+
+  void _onSearchScannedItems(
+    SearchScannedItemsEvent event,
+    Emitter<StockState> emit,
+  ) {
+    final q = event.query.toLowerCase().trim();
+
+    if (q.isEmpty) {
+      emit(state.copyWith(filteredItems: state.items));
+      return;
+    }
+
+    final filtered = state.items.where((item) {
+      return item.itemName.toLowerCase().contains(q) ||
+          item.itemCode.toLowerCase().contains(q);
+    }).toList();
+
+    emit(state.copyWith(filteredItems: filtered));
   }
 }
