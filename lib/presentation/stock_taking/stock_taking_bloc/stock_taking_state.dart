@@ -13,6 +13,8 @@ class StockState extends Equatable {
   final String? success;
   final List<StockItemModel> filteredItems;
   final int? selectedIndex;
+  final bool productAlreadyExists;
+  final bool productExistsDialogShown;
 
   /// suggestions for search (auto-complete)
   final List<ProductModel> suggestions;
@@ -28,6 +30,8 @@ class StockState extends Equatable {
     this.suggestions = const [],
     this.filteredItems = const [],
     this.selectedIndex,
+    this.productAlreadyExists = false,
+    this.productExistsDialogShown = false,
   });
 
   StockState copyWith({
@@ -38,10 +42,13 @@ class StockState extends Equatable {
     List<String>? units,
     String? selectedUnit,
     bool setNullSelectedUnit = false,
+    bool setNullSelectedIndex = false,
     String? error,
+    bool? productAlreadyExists,
     String? success,
     List<StockItemModel>? filteredItems,
     int? selectedIndex,
+    bool? productExistsDialogShown,
 
     List<ProductModel>? suggestions,
   }) {
@@ -58,11 +65,15 @@ class StockState extends Equatable {
           ? null
           : (selectedUnit ?? this.selectedUnit),
       filteredItems: filteredItems ?? this.filteredItems,
-      selectedIndex: selectedIndex ?? this.selectedIndex,
-
+      productAlreadyExists: productAlreadyExists ?? this.productAlreadyExists,
+      selectedIndex: setNullSelectedIndex
+          ? null
+          : (selectedIndex ?? this.selectedIndex),
       error: error,
       success: success,
       suggestions: suggestions ?? this.suggestions,
+      productExistsDialogShown:
+          productExistsDialogShown ?? this.productExistsDialogShown,
     );
   }
 

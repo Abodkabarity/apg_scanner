@@ -68,56 +68,96 @@ class StockTakingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<StockBloc, StockState>(
-      listener: (context, state) {
-        if (state.error != null) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(state.error!)));
-        }
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<StockBloc, StockState>(
+          listenWhen: (prev, curr) =>
+              curr.productAlreadyExists &&
+              !prev.productAlreadyExists &&
+              curr.currentProduct != null,
+          listener: (context, state) async {
+            final bloc = context.read<StockBloc>();
 
-        if (state.success != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.only(top: 20, left: 12, right: 12),
-              elevation: 10,
-              backgroundColor: Colors.green.shade600,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 26),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      state.success!,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+            final result = await showDialog<bool>(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => AlertDialog(
+                title: const Text("Product already scanned"),
+                content: const Text(
+                  "This product is already saved.\nDo you want to edit it?",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context, false);
+                      FocusScope.of(context).unfocus();
+                    },
+                    child: const Text("No"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context, true);
+                      FocusScope.of(context).unfocus();
+                    },
+                    child: const Text("Yes"),
                   ),
                 ],
               ),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+            );
 
-          scanController.clear();
-          nameController.clear();
-          qtyController.clear();
-          context.read<StockBloc>().add(ResetFormEvent());
-        }
-      },
+            if (result == true) {
+              final existing = state.items.firstWhere(
+                (e) => e.itemCode == state.currentProduct!.itemCode,
+              );
+              qtyController.text = existing.quantity.toString();
+
+              bloc.add(ChangeSelectedIndexEvent(state.items.indexOf(existing)));
+              scanController.clear();
+            } else {
+              bloc.add(ResetFormEvent());
+            }
+
+            bloc.add(const ClearProductAlreadyExistsFlagEvent());
+          },
+        ),
+        BlocListener<StockBloc, StockState>(
+          listenWhen: (prev, curr) => prev.success != curr.success,
+          listener: (context, state) {
+            if (state.success == null) return;
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.success!),
+                backgroundColor: Colors.green,
+              ),
+            );
+
+            scanController.clear();
+            nameController.clear();
+            qtyController.clear();
+
+            context.read<StockBloc>().add(ResetFormEvent());
+          },
+        ),
+        BlocListener<StockBloc, StockState>(
+          listenWhen: (prev, curr) => prev.error != curr.error,
+          listener: (context, state) {
+            if (state.error == null) return;
+            print(state.error);
+            /*ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error!),
+                backgroundColor: Colors.red,
+              ),
+            );*/
+          },
+        ),
+      ],
       child: BlocBuilder<StockBloc, StockState>(
         builder: (context, state) {
           if (state.success == null && state.currentProduct != null) {
             nameController.text = state.currentProduct!.itemName;
           }
-
           return GestureDetector(
             onTap: () {
               FocusScope.of(context).unfocus();
@@ -138,6 +178,38 @@ class StockTakingPage extends StatelessWidget {
                 ),
                 centerTitle: true,
                 backgroundColor: AppColor.primaryColor,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.cloud_upload),
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text("Confirm Upload"),
+                          content: const Text(
+                            "Do you want to save and upload all scanned items?",
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text("Cancel"),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text("Yes"),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        context.read<StockBloc>().add(
+                          UploadStockEvent(projectId: projects.name.toString()),
+                        );
+                      }
+                    },
+                  ),
+                ],
               ),
               body: Stack(
                 children: [
@@ -452,7 +524,6 @@ class StockTakingPage extends StatelessWidget {
                                                   SnackBarBehavior.floating,
                                             ),
                                           );
-                                          FocusScope.of(context).unfocus();
 
                                           return;
                                         }
@@ -465,6 +536,7 @@ class StockTakingPage extends StatelessWidget {
                                             qty: qty,
                                           ),
                                         );
+                                        FocusScope.of(context).unfocus();
                                       },
                                     ),
                                   ),
@@ -473,7 +545,61 @@ class StockTakingPage extends StatelessWidget {
                                     child: SubmitButton(
                                       label: 'Delete',
                                       icon: Icons.delete,
-                                      onPressed: () {},
+
+                                      onPressed: () {
+                                        final bloc = context.read<StockBloc>();
+                                        final index = bloc.state.selectedIndex;
+
+                                        if (index == null) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                "Please select an item to delete",
+                                              ),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                          return;
+                                        }
+                                        final item = bloc.state.items[index];
+
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => AlertDialog(
+                                            title: const Text(
+                                              "Delete Item",
+                                              style: TextStyle(
+                                                color: AppColor.secondaryColor,
+                                              ),
+                                            ),
+                                            content: Text(
+                                              "Are you sure you want to delete\n${item.itemName} ?",
+                                              style: const TextStyle(
+                                                color: AppColor.secondaryColor,
+                                              ),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                child: const Text("Cancel"),
+                                                onPressed: () =>
+                                                    Navigator.pop(context),
+                                              ),
+                                              ElevatedButton(
+                                                child: const Text("Delete"),
+                                                onPressed: () {
+                                                  bloc.add(
+                                                    DeleteStockEvent(item.id),
+                                                  );
+                                                  Navigator.pop(context);
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        FocusScope.of(context).unfocus();
+                                      },
                                     ),
                                   ),
                                 ],
@@ -484,14 +610,15 @@ class StockTakingPage extends StatelessWidget {
 
                         ShowItemsList(
                           onItemSelected: (item) {
-                            qtyController.text = item.quantity.toString();
-                            nameController.text = item.itemName;
                             context.read<StockBloc>().add(
-                              ChangeUnitEvent(item.unit),
+                              ScannedItemSelectedEvent(item),
                             );
 
+                            qtyController.text = item.quantity.toString();
                             FocusScope.of(context).unfocus();
                           },
+                          nameController: nameController,
+                          qtyController: qtyController,
                         ),
                       ],
                     ),

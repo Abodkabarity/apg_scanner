@@ -9,8 +9,15 @@ import '../../../core/app_color/app_color.dart';
 import '../../../data/model/stock_taking_model.dart';
 
 class ShowItemsList extends StatelessWidget {
-  const ShowItemsList({super.key, required this.onItemSelected});
+  const ShowItemsList({
+    super.key,
+    required this.onItemSelected,
+    required this.nameController,
+    required this.qtyController,
+  });
   final Function(StockItemModel) onItemSelected;
+  final TextEditingController nameController;
+  final TextEditingController qtyController;
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<StockBloc, StockState>(
@@ -79,11 +86,59 @@ class ShowItemsList extends StatelessWidget {
                           ),
                         ),
                         onTap: () {
-                          context.read<StockBloc>().add(
-                            ChangeSelectedIndexEvent(i),
-                          );
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) => AlertDialog(
+                              title: const Text(
+                                "Edit Item",
+                                style: TextStyle(
+                                  color: AppColor.secondaryColor,
+                                ),
+                              ),
+                              content: const Text(
+                                "Do you want to edit it?",
+                                style: TextStyle(
+                                  color: AppColor.secondaryColor,
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  child: const Text(
+                                    "No",
+                                    style: TextStyle(
+                                      color: AppColor.secondaryColor,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    context.read<StockBloc>().add(
+                                      ResetFormEvent(),
+                                    );
+                                    nameController.clear();
+                                    qtyController.clear();
+                                    FocusScope.of(context).unfocus();
+                                    Navigator.pop(dialogContext);
+                                  },
+                                ),
+                                ElevatedButton(
+                                  child: const Text(
+                                    "Yes",
+                                    style: TextStyle(
+                                      color: AppColor.secondaryColor,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    context.read<StockBloc>().add(
+                                      ChangeSelectedIndexEvent(i),
+                                    );
+                                    onItemSelected(items);
+                                    FocusScope.of(context).unfocus();
 
-                          onItemSelected(items);
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
                         },
                       ),
                     );

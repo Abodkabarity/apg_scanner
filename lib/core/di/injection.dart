@@ -2,6 +2,7 @@ import 'package:apg_scanner/data/repositories/auth_repository.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../data/model/session_model.dart';
 import '../../data/remote/products_remote_service.dart';
 import '../../data/remote/stock_remote_service.dart';
 import '../../data/repositories/products_repository.dart';
@@ -70,6 +71,12 @@ void setupGetIt() {
     () => ProductsSyncService(
       getIt<ProductsRepository>(),
       Supabase.instance.client,
+    ),
+  );
+  getIt.registerSingleton<BranchSession>(
+    BranchSession(
+      branchName: "AL AIN MAIN",
+      branchEmail: "main@alain-pharmacy.com",
     ),
   );
 }

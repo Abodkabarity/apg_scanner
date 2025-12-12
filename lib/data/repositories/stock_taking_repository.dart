@@ -1,7 +1,10 @@
 import 'package:uuid/uuid.dart';
 
+import '../../core/di/injection.dart';
 import '../../core/session/user_session.dart';
+import '../../core/supabase/supbase_services.dart';
 import '../model/products_model.dart';
+import '../model/session_model.dart';
 import '../model/stock_taking_model.dart';
 import '../remote/stock_remote_service.dart';
 import '../services/stock_local_service.dart';
@@ -119,5 +122,30 @@ class StockRepository {
     }
 
     print("=========== END DEBUG ===========");
+  }
+
+  Future<void> uploadStockItems({
+    required String projectId,
+    required List<StockItemModel> items,
+  }) async {
+    final session = getIt<BranchSession>();
+    print(session.branchName);
+    final payload = items.map((e) {
+      return {
+        "id": e.id,
+        "project_name": projectId,
+        "branch": session.branchName,
+        "item_code": e.itemCode,
+        "item_name": e.itemName,
+        "barcode": e.barcode,
+        "unit_type": e.unit,
+        "quantity": e.quantity,
+        "sub_quantity": e.subQuantity,
+        "created_at": e.createdAt.toIso8601String(),
+        "updated_at": DateTime.now().toIso8601String(),
+      };
+    }).toList();
+
+    await supabase.from("stock_taking_items").insert(payload);
   }
 }

@@ -1,3 +1,5 @@
+import 'package:apg_scanner/data/model/stock_taking_model.dart';
+
 import '../../../data/model/products_model.dart';
 
 abstract class StockEvent {
@@ -66,4 +68,23 @@ class SearchScannedItemsEvent extends StockEvent {
 class ChangeSelectedIndexEvent extends StockEvent {
   final int index;
   ChangeSelectedIndexEvent(this.index);
+}
+
+class ScannedItemSelectedEvent extends StockEvent {
+  final StockItemModel item;
+
+  ScannedItemSelectedEvent(this.item);
+}
+
+class MarkProductExistsDialogShownEvent extends StockEvent {
+  const MarkProductExistsDialogShownEvent();
+}
+
+class ClearProductAlreadyExistsFlagEvent extends StockEvent {
+  const ClearProductAlreadyExistsFlagEvent();
+}
+
+class UploadStockEvent extends StockEvent {
+  final String projectId;
+  const UploadStockEvent({required this.projectId});
 }
