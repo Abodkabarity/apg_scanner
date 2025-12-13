@@ -26,3 +26,5 @@ class DeleteProjectEvent extends ProjectEvent {
   final String id;
   const DeleteProjectEvent(this.id);
 }
+
+class LogoutRequested extends ProjectEvent {}

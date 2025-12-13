@@ -2,15 +2,16 @@ import 'package:apg_scanner/data/repositories/auth_repository.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../data/model/session_model.dart';
 import '../../data/remote/products_remote_service.dart';
 import '../../data/remote/stock_remote_service.dart';
+import '../../data/repositories/branch_repository.dart';
 import '../../data/repositories/products_repository.dart';
 import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
 import '../../data/services/local_storage_service.dart';
 import '../../data/services/products_local_service.dart';
 import '../../data/services/products_sync_service.dart';
+import '../../data/services/stock_export_service.dart';
 import '../../data/services/stock_local_service.dart';
 import '../../data/services/supabase_service.dart';
 import '../../presentation/add_project/project_bloc/project_bloc.dart';
@@ -73,10 +74,9 @@ void setupGetIt() {
       Supabase.instance.client,
     ),
   );
-  getIt.registerSingleton<BranchSession>(
-    BranchSession(
-      branchName: "AL AIN MAIN",
-      branchEmail: "main@alain-pharmacy.com",
-    ),
+
+  getIt.registerLazySingleton(
+    () => StockExportService(getIt<StockRepository>()),
   );
+  getIt.registerLazySingleton(() => BranchRepository(Supabase.instance.client));
 }

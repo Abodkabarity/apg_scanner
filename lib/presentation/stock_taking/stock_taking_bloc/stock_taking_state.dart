@@ -15,6 +15,8 @@ class StockState extends Equatable {
   final int? selectedIndex;
   final bool productAlreadyExists;
   final bool productExistsDialogShown;
+  final bool isUploading;
+  final String? uploadMessage;
 
   /// suggestions for search (auto-complete)
   final List<ProductModel> suggestions;
@@ -32,6 +34,8 @@ class StockState extends Equatable {
     this.selectedIndex,
     this.productAlreadyExists = false,
     this.productExistsDialogShown = false,
+    this.isUploading = false,
+    this.uploadMessage,
   });
 
   StockState copyWith({
@@ -41,11 +45,14 @@ class StockState extends Equatable {
     bool setNullProduct = false,
     List<String>? units,
     String? selectedUnit,
+    bool? isUploading,
+    String? uploadMessage,
     bool setNullSelectedUnit = false,
     bool setNullSelectedIndex = false,
     String? error,
     bool? productAlreadyExists,
     String? success,
+
     List<StockItemModel>? filteredItems,
     int? selectedIndex,
     bool? productExistsDialogShown,
@@ -70,6 +77,8 @@ class StockState extends Equatable {
           ? null
           : (selectedIndex ?? this.selectedIndex),
       error: error,
+      isUploading: isUploading ?? this.isUploading,
+      uploadMessage: uploadMessage ?? this.uploadMessage,
       success: success,
       suggestions: suggestions ?? this.suggestions,
       productExistsDialogShown:
@@ -89,5 +98,6 @@ class StockState extends Equatable {
     suggestions,
     filteredItems,
     selectedIndex,
+    isUploading,
   ];
 }

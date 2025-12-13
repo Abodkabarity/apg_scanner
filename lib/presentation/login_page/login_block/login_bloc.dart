@@ -13,22 +13,44 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
 
   LoginBloc(this.authRepository) : super(const LoginState()) {
     on<LoginSubmitted>(_onLogin);
+    on<ChangeObscureStatusEvent>((event, emit) {
+      emit(state.copyWith(isObscure: !state.isObscure));
+    });
   }
 
   Future<void> _onLogin(LoginSubmitted event, Emitter<LoginState> emit) async {
-    emit(state.copyWith(isLoading: true, error: null));
+    /// 1️⃣ Start login loading
+    emit(
+      state.copyWith(
+        status: LoginStatus.authenticating,
+        message: "Signing in...",
+        error: null,
+      ),
+    );
 
     try {
       await authRepository.login(event.email, event.password);
 
       final currentUser = Supabase.instance.client.auth.currentUser;
-
       if (currentUser == null) {
         emit(
-          state.copyWith(isLoading: false, error: "Login failed — try again"),
+          state.copyWith(
+            status: LoginStatus.failure,
+            error: "Login failed — try again",
+            message: null,
+          ),
         );
         return;
       }
+
+      /// 2️⃣ Login succeeded → show syncing message (keep loading)
+      emit(
+        state.copyWith(
+          status: LoginStatus.syncing,
+          message: "Login successful ✅\nLoading product data...",
+          error: null,
+        ),
+      );
 
       final profile = await Supabase.instance.client
           .from('profiles')
@@ -43,10 +65,18 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
 
       final productsSync = getIt<ProductsSyncService>();
       await productsSync.initialSync();
-      emit(state.copyWith(isLoading: false, isSuccess: true));
+
+      /// 3️⃣ All done
+      emit(
+        state.copyWith(status: LoginStatus.success, message: null, error: null),
+      );
     } catch (e) {
       emit(
-        state.copyWith(isLoading: false, error: "Invalid email or password"),
+        state.copyWith(
+          status: LoginStatus.failure,
+          error: "Invalid email or password",
+          message: null,
+        ),
       );
     }
   }

@@ -14,3 +14,8 @@ class LoginSubmitted extends LoginEvent {
   @override
   List<Object?> get props => [email, password];
 }
+
+class ChangeObscureStatusEvent extends LoginEvent {
+  final bool isObscure;
+  ChangeObscureStatusEvent(this.isObscure);
+}

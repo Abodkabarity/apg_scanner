@@ -5,7 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'login_textfield.dart';
 
 class LogInWidget extends StatelessWidget {
-  LogInWidget({
+  const LogInWidget({
     super.key,
     required this.title,
     required this.emailController,
@@ -13,6 +13,8 @@ class LogInWidget extends StatelessWidget {
     required this.onPressed,
     required this.error,
     required this.formKey,
+    required this.onCheckBoxChanged,
+    required this.isObscure,
   });
   final String title;
   final TextEditingController emailController;
@@ -20,7 +22,8 @@ class LogInWidget extends StatelessWidget {
   final void Function() onPressed;
   final String? error;
   final GlobalKey formKey;
-
+  final void Function(bool?) onCheckBoxChanged;
+  final bool isObscure;
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -56,7 +59,7 @@ class LogInWidget extends StatelessWidget {
             ),
             LoginTextField(
               label: 'Password',
-              isObscure: true,
+              isObscure: !isObscure,
               controller: passwordController,
               icon: Icons.lock,
 
@@ -67,7 +70,21 @@ class LogInWidget extends StatelessWidget {
               },
               errorText: error,
             ),
-            SizedBox(height: 40.h),
+
+            CheckboxListTile(
+              value: isObscure,
+              activeColor: AppColor.secondaryColor,
+              title: Padding(
+                padding: EdgeInsets.only(left: 20.w),
+                child: Text(
+                  "Show Password",
+                  style: TextStyle(fontSize: 16.sp, color: Colors.white),
+                ),
+              ),
+
+              onChanged: onCheckBoxChanged,
+            ),
+            SizedBox(height: 20.h),
             Container(
               decoration: BoxDecoration(
                 boxShadow: [

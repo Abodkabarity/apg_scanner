@@ -312,23 +312,46 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     UploadStockEvent event,
     Emitter<StockState> emit,
   ) async {
-    emit(state.copyWith(loading: true, error: null));
+    emit(
+      state.copyWith(
+        isUploading: true,
+        uploadMessage: "Uploading Data...",
+        error: null,
+        success: null,
+      ),
+    );
 
     try {
       final items = state.items;
 
       if (items.isEmpty) {
-        emit(state.copyWith(loading: false, error: "No items to upload"));
+        emit(
+          state.copyWith(
+            isUploading: false,
+            error: "No Items to Upload",
+            uploadMessage: null,
+          ),
+        );
         return;
       }
 
       await repo.uploadStockItems(projectId: event.projectId, items: items);
 
       emit(
-        state.copyWith(loading: false, success: "Stock uploaded successfully"),
+        state.copyWith(
+          isUploading: false,
+          success: "Data Uploaded Successfully",
+          uploadMessage: null,
+        ),
       );
     } catch (e) {
-      emit(state.copyWith(loading: false, error: e.toString()));
+      emit(
+        state.copyWith(
+          isUploading: false,
+          error: e.toString(),
+          uploadMessage: null,
+        ),
+      );
     }
   }
 }

@@ -106,7 +106,7 @@ class StockItemModel {
   factory StockItemModel.fromJson(Map<String, dynamic> json) {
     return StockItemModel(
       id: json['id'],
-      projectId: json['project_id'],
+      projectId: json['project_name'],
       branchName: json['branch_name'] ?? '',
       itemId: json['item_id'],
       itemCode: json['item_code'],
@@ -126,7 +126,7 @@ class StockItemModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'project_id': projectId,
+      'project_name': projectId,
       'branch_name': branchName,
       'item_id': itemId,
       'item_code': itemCode,

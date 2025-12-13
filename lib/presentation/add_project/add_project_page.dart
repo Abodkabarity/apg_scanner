@@ -7,18 +7,54 @@ import 'package:apg_scanner/presentation/widgets/background_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_color/app_color.dart';
 import '../../core/app_images/app_images.dart';
 import '../../core/di/injection.dart';
+import '../../core/session/user_session.dart';
 import '../../data/repositories/products_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
+import '../login_page/login_page.dart';
 import '../stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
 import '../stock_taking/stock_taking_bloc/stock_taking_event.dart';
 
 class AddProjectPage extends StatelessWidget {
   AddProjectPage({super.key});
   final TextEditingController projectController = TextEditingController();
+  Future<void> _logout(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Logout"),
+        content: const Text("Are you sure you want to logout?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Logout"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    await Supabase.instance.client.auth.signOut();
+    getIt<UserSession>().clear();
+
+    if (!context.mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => LoginPage()),
+      (_) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -34,6 +70,17 @@ class AddProjectPage extends StatelessWidget {
           padding: const EdgeInsets.only(left: 20),
           child: Image.asset(AppImages.logo, fit: BoxFit.cover),
         ),
+        actions: [
+          Padding(
+            padding: EdgeInsets.only(right: 10.w),
+            child: IconButton(
+              onPressed: () async {
+                await _logout(context);
+              },
+              icon: Icon(Icons.login_outlined, color: Colors.white, size: 30),
+            ),
+          ),
+        ],
         backgroundColor: AppColor.primaryColor,
         centerTitle: true,
       ),

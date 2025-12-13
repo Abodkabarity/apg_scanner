@@ -1,24 +1,39 @@
 import 'package:equatable/equatable.dart';
 
+enum LoginStatus { idle, authenticating, syncing, success, failure }
+
 class LoginState extends Equatable {
-  final bool isLoading;
+  final LoginStatus status;
+  final String? message;
   final String? error;
-  final bool isSuccess;
+  final bool isObscure;
 
   const LoginState({
-    this.isLoading = false,
+    this.status = LoginStatus.idle,
+    this.message,
     this.error,
-    this.isSuccess = false,
+    this.isObscure = false,
   });
 
-  LoginState copyWith({bool? isLoading, String? error, bool? isSuccess}) {
+  bool get isLoading =>
+      status == LoginStatus.authenticating || status == LoginStatus.syncing;
+
+  bool get isSuccess => status == LoginStatus.success;
+
+  LoginState copyWith({
+    LoginStatus? status,
+    String? message,
+    String? error,
+    bool? isObscure,
+  }) {
     return LoginState(
-      isLoading: isLoading ?? this.isLoading,
+      status: status ?? this.status,
+      message: message ?? this.message,
+      isObscure: isObscure ?? this.isObscure,
       error: error,
-      isSuccess: isSuccess ?? this.isSuccess,
     );
   }
 
   @override
-  List<Object?> get props => [isLoading, error, isSuccess];
+  List<Object?> get props => [status, message, error, isObscure];
 }

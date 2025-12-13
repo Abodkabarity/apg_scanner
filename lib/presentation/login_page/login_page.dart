@@ -17,72 +17,106 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: BlocListener<LoginBloc, LoginState>(
-        listener: (context, state) {
-          if (state.isLoading) {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => Center(child: CircularProgressIndicator()),
-            );
-          }
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        body: BlocListener<LoginBloc, LoginState>(
+          listener: (context, state) {
+            if (state.status == LoginStatus.failure && state.error != null) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.error!)));
+            }
 
-          if (state.error != null) {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.error!)));
-          }
-
-          if (state.isSuccess) {
-            Navigator.pop(context);
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => AddProjectPage()),
-            );
-          }
-        },
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset(
-                "assets/images/background.png",
-                fit: BoxFit.cover,
-              ),
-            ),
-            Center(
-              child: Container(
-                margin: EdgeInsets.only(top: 200.h),
-                width: 350.w,
-                height: 400.h,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15.r),
-                  color: Colors.white.withValues(alpha: 0.4),
+            if (state.status == LoginStatus.success) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => AddProjectPage()),
+              );
+            }
+          },
+          child: Stack(
+            children: [
+              /// Background
+              Positioned.fill(
+                child: Image.asset(
+                  "assets/images/background.png",
+                  fit: BoxFit.cover,
                 ),
-                child: BlocBuilder<LoginBloc, LoginState>(
-                  builder: (context, state) {
-                    return LogInWidget(
-                      title: " APG Stock Taking",
-                      emailController: emailController,
-                      passwordController: passwordController,
-                      onPressed: () {
-                        context.read<LoginBloc>().add(
-                          LoginSubmitted(
-                            "a.alkabariti@alain-pharmacy.com",
-                            "Abod@1234",
+              ),
+
+              /// Login Card
+              Center(
+                child: Container(
+                  margin: EdgeInsets.only(top: 200.h),
+                  width: 350.w,
+                  height: 400.h,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(15.r),
+                    color: Colors.white.withValues(alpha: 0.4),
+                  ),
+                  child: BlocBuilder<LoginBloc, LoginState>(
+                    builder: (context, state) {
+                      return LogInWidget(
+                        title: "APG Stock Taking",
+                        emailController: emailController,
+                        passwordController: passwordController,
+                        onPressed: () {
+                          if (_formKey.currentState?.validate() != true) return;
+
+                          context.read<LoginBloc>().add(
+                            LoginSubmitted(
+                              emailController.text.trim(),
+                              passwordController.text.trim(),
+                            ),
+                          );
+                        },
+                        error: state.error,
+                        formKey: _formKey,
+                        onCheckBoxChanged: (value) {
+                          context.read<LoginBloc>().add(
+                            ChangeObscureStatusEvent(value!),
+                          );
+                        },
+                        isObscure: state.isObscure,
+                      );
+                    },
+                  ),
+                ),
+              ),
+
+              /// 🔄 Loading Overlay
+              BlocBuilder<LoginBloc, LoginState>(
+                builder: (context, state) {
+                  if (!state.isLoading) return const SizedBox();
+
+                  return Container(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(color: Colors.white),
+                          SizedBox(height: 20.h),
+                          Text(
+                            state.message ?? "Loading...",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        );
-                      },
-
-                      error: state.error,
-                      formKey: _formKey,
-                    );
-                  },
-                ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

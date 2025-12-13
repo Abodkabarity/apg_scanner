@@ -1,7 +1,7 @@
 import 'package:apg_scanner/presentation/add_project/project_bloc/project_bloc.dart';
 import 'package:apg_scanner/presentation/add_project/project_bloc/project_event.dart';
 import 'package:apg_scanner/presentation/login_page/login_block/login_bloc.dart';
-import 'package:apg_scanner/presentation/login_page/login_page.dart';
+import 'package:apg_scanner/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -54,7 +54,7 @@ class APGScanner extends StatelessWidget {
         builder: (context, child) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: LoginPage(),
+            home: SplashScreen(),
           );
         },
       ),

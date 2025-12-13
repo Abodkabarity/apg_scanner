@@ -2,10 +2,12 @@ import 'package:apg_scanner/core/app_color/app_color.dart';
 import 'package:apg_scanner/core/app_images/app_images.dart';
 import 'package:apg_scanner/data/model/products_model.dart';
 import 'package:apg_scanner/data/model/project_model.dart';
+import 'package:apg_scanner/presentation/stock_taking/product_details_block.dart';
 import 'package:apg_scanner/presentation/stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
 import 'package:apg_scanner/presentation/stock_taking/stock_taking_bloc/stock_taking_event.dart';
 import 'package:apg_scanner/presentation/stock_taking/stock_taking_bloc/stock_taking_state.dart';
 import 'package:apg_scanner/presentation/stock_taking/widgets/barcode_scanner_page.dart';
+import 'package:apg_scanner/presentation/stock_taking/widgets/export_botton_sheet.dart';
 import 'package:apg_scanner/presentation/stock_taking/widgets/search_results_page.dart';
 import 'package:apg_scanner/presentation/stock_taking/widgets/show_item_widget.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +15,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../core/di/injection.dart';
-import '../../data/repositories/stock_taking_repository.dart';
+import '../../core/session/user_session.dart';
 import '../widgets/background_widget.dart';
 
 class StockTakingPage extends StatelessWidget {
@@ -143,13 +145,12 @@ class StockTakingPage extends StatelessWidget {
           listenWhen: (prev, curr) => prev.error != curr.error,
           listener: (context, state) {
             if (state.error == null) return;
-            print(state.error);
-            /*ScaffoldMessenger.of(context).showSnackBar(
+            ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.error!),
                 backgroundColor: Colors.red,
               ),
-            );*/
+            );
           },
         ),
       ],
@@ -180,8 +181,12 @@ class StockTakingPage extends StatelessWidget {
                 backgroundColor: AppColor.primaryColor,
                 actions: [
                   IconButton(
-                    icon: const Icon(Icons.cloud_upload),
+                    icon: const Icon(
+                      Icons.cloud_upload,
+                      color: AppColor.secondaryColor,
+                    ),
                     onPressed: () async {
+                      final bloc = context.read<StockBloc>();
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (_) => AlertDialog(
@@ -203,11 +208,30 @@ class StockTakingPage extends StatelessWidget {
                       );
 
                       if (confirm == true) {
-                        context.read<StockBloc>().add(
+                        bloc.add(
                           UploadStockEvent(projectId: projects.name.toString()),
                         );
                       }
                     },
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      final branchName = getIt<UserSession>().branch;
+
+                      showModalBottomSheet(
+                        context: context,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                        ),
+                        builder: (_) => ExportBottomSheet(
+                          projectId: projects.name,
+                          branchName: branchName!,
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.download, color: AppColor.secondaryColor),
                   ),
                 ],
               ),
@@ -441,171 +465,12 @@ class StockTakingPage extends StatelessWidget {
                         ),
 
                         // ----------------- PRODUCT DETAILS -----------------
-                        Container(
-                          margin: EdgeInsets.all(8),
-                          padding: EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(15.r),
-                            color: const Color(0x1a4eb0de),
-                          ),
-                          child: Column(
-                            children: [
-                              TextField(
-                                controller: nameController,
-                                readOnly: true,
-                                decoration: InputDecoration(
-                                  fillColor: Colors.white,
-                                  filled: true,
-                                  labelText: "Name",
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(25.r),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 30.h),
+                        ProductDetailsBlock(
+                          nameController: nameController,
+                          qtyController: qtyController,
+                          scanController: scanController,
 
-                              Row(
-                                children: [
-                                  const Expanded(
-                                    flex: 2,
-                                    child: DropDownUnitType(),
-                                  ),
-                                  SizedBox(width: 10.w),
-                                  Expanded(
-                                    flex: 3,
-                                    child: TextField(
-                                      controller: qtyController,
-                                      keyboardType: TextInputType.number,
-                                      decoration: InputDecoration(
-                                        fillColor: Colors.white,
-                                        filled: true,
-                                        labelText: "Quantity",
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            25.r,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              SizedBox(height: 25.h),
-
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: SubmitButton(
-                                      label: "Approve",
-                                      icon: Icons.done,
-                                      onPressed: () {
-                                        getIt<StockRepository>().debugPrintAll(
-                                          projects.id,
-                                        );
-                                        final unit = context
-                                            .read<StockBloc>()
-                                            .state
-                                            .selectedUnit;
-                                        final qty =
-                                            int.tryParse(qtyController.text) ??
-                                            0;
-
-                                        if (unit == null || qty <= 0) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: const Text(
-                                                "Unit & Quantity required",
-                                              ),
-                                              backgroundColor: Colors.red,
-                                              behavior:
-                                                  SnackBarBehavior.floating,
-                                            ),
-                                          );
-
-                                          return;
-                                        }
-
-                                        context.read<StockBloc>().add(
-                                          ApproveItemEvent(
-                                            projectId: projects.id.toString(),
-                                            barcode: scanController.text,
-                                            unit: unit,
-                                            qty: qty,
-                                          ),
-                                        );
-                                        FocusScope.of(context).unfocus();
-                                      },
-                                    ),
-                                  ),
-                                  SizedBox(width: 10.w),
-                                  Expanded(
-                                    child: SubmitButton(
-                                      label: 'Delete',
-                                      icon: Icons.delete,
-
-                                      onPressed: () {
-                                        final bloc = context.read<StockBloc>();
-                                        final index = bloc.state.selectedIndex;
-
-                                        if (index == null) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                "Please select an item to delete",
-                                              ),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
-                                          return;
-                                        }
-                                        final item = bloc.state.items[index];
-
-                                        showDialog(
-                                          context: context,
-                                          builder: (_) => AlertDialog(
-                                            title: const Text(
-                                              "Delete Item",
-                                              style: TextStyle(
-                                                color: AppColor.secondaryColor,
-                                              ),
-                                            ),
-                                            content: Text(
-                                              "Are you sure you want to delete\n${item.itemName} ?",
-                                              style: const TextStyle(
-                                                color: AppColor.secondaryColor,
-                                              ),
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                child: const Text("Cancel"),
-                                                onPressed: () =>
-                                                    Navigator.pop(context),
-                                              ),
-                                              ElevatedButton(
-                                                child: const Text("Delete"),
-                                                onPressed: () {
-                                                  bloc.add(
-                                                    DeleteStockEvent(item.id),
-                                                  );
-                                                  Navigator.pop(context);
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                        FocusScope.of(context).unfocus();
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                          projects: projects,
                         ),
 
                         ShowItemsList(
@@ -623,107 +488,32 @@ class StockTakingPage extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (state.isUploading)
+                    Container(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            CircularProgressIndicator(color: Colors.white),
+                            SizedBox(height: 16),
+                            Text(
+                              "Uploading data...",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class DropDownUnitType extends StatelessWidget {
-  const DropDownUnitType({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<StockBloc, StockState>(
-      builder: (context, state) {
-        final baseUnits = state.units;
-
-        final String? selectedUnit = state.selectedUnit;
-
-        final List<String> units = baseUnits.isNotEmpty
-            ? baseUnits
-            : (selectedUnit != null ? [selectedUnit] : <String>[]);
-
-        final String? selected =
-            (selectedUnit != null && units.contains(selectedUnit))
-            ? selectedUnit
-            : null;
-
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: AppColor.secondaryColor),
-            borderRadius: BorderRadius.circular(25.r),
-          ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12.w),
-            child: DropdownButton<String>(
-              value: selected,
-              isExpanded: true,
-              underline: const SizedBox(),
-              hint: Text(
-                "Unit Type",
-                style: TextStyle(color: AppColor.secondaryColor),
-              ),
-              items: units.map((e) {
-                return DropdownMenuItem(value: e, child: Text(e));
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  context.read<StockBloc>().add(ChangeUnitEvent(value));
-                }
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class SubmitButton extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-  final void Function()? onPressed;
-
-  const SubmitButton({
-    super.key,
-    required this.label,
-    required this.onPressed,
-    this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColor.primaryColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15.r),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Center(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  color: AppColor.secondaryColor,
-                ),
-              ),
-            ),
-          ),
-          if (icon != null)
-            Icon(icon, color: AppColor.secondaryColor, size: 25),
-        ],
       ),
     );
   }

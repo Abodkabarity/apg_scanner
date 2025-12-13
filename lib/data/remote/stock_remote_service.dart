@@ -18,7 +18,7 @@ class StockRemoteService {
     final response = await client
         .from('stock_taking_items')
         .select()
-        .eq('project_id', projectId)
+        .eq('project_name', projectId)
         .eq('is_deleted', false);
 
     return (response as List).map((e) => StockItemModel.fromJson(e)).toList();
