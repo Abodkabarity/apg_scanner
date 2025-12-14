@@ -31,7 +31,7 @@ class LogInWidget extends StatelessWidget {
         key: formKey,
         child: Column(
           children: [
-            SizedBox(height: 15.h),
+            SizedBox(height: 10.h),
             Text(
               title,
               style: TextStyle(
@@ -40,21 +40,28 @@ class LogInWidget extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: 50.h),
+            SizedBox(height: 25.h),
             LoginTextField(
               label: 'Email',
               isObscure: false,
               controller: emailController,
               icon: Icons.email,
               validator: (value) {
-                if (value == null || value.isEmpty) return "Email is required";
+                if (value == null || value.isEmpty) {
+                  return "Email is required";
+                }
 
-                bool valid = RegExp(
+                final valid = RegExp(
                   r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$",
                 ).hasMatch(value);
 
-                if (!valid) return "Please enter a valid email";
+                if (!valid) {
+                  return "Please enter a valid email";
+                }
+
+                return null;
               },
+
               errorText: error,
             ),
             LoginTextField(
@@ -67,6 +74,7 @@ class LogInWidget extends StatelessWidget {
                 if (value == null || value.isEmpty) {
                   return "Password is required";
                 }
+                return null;
               },
               errorText: error,
             ),
@@ -84,7 +92,7 @@ class LogInWidget extends StatelessWidget {
 
               onChanged: onCheckBoxChanged,
             ),
-            SizedBox(height: 20.h),
+            SizedBox(height: 15.h),
             Container(
               decoration: BoxDecoration(
                 boxShadow: [

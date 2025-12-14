@@ -7,12 +7,13 @@ class LoginState extends Equatable {
   final String? message;
   final String? error;
   final bool isObscure;
-
+  final bool navToHome;
   const LoginState({
     this.status = LoginStatus.idle,
     this.message,
     this.error,
     this.isObscure = false,
+    this.navToHome = false,
   });
 
   bool get isLoading =>
@@ -25,15 +26,19 @@ class LoginState extends Equatable {
     String? message,
     String? error,
     bool? isObscure,
+    bool? navToHome,
+    bool clearMessage = false,
+    bool clearError = false,
   }) {
     return LoginState(
       status: status ?? this.status,
-      message: message ?? this.message,
+      message: clearMessage ? null : (message ?? this.message),
+      error: clearError ? null : (error ?? this.error),
       isObscure: isObscure ?? this.isObscure,
-      error: error,
+      navToHome: navToHome ?? this.navToHome,
     );
   }
 
   @override
-  List<Object?> get props => [status, message, error, isObscure];
+  List<Object?> get props => [status, message, error, isObscure, navToHome];
 }

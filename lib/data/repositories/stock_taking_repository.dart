@@ -2,6 +2,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/session/user_session.dart';
 import '../../core/supabase/supbase_services.dart';
+import '../../core/utils/excel_exporter.dart';
 import '../model/products_model.dart';
 import '../model/stock_taking_model.dart';
 import '../remote/stock_remote_service.dart';
@@ -172,5 +173,28 @@ class StockRepository {
     print("ROWS = ${response.length}");
 
     return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<void> exportExcel({required String projectId}) async {
+    final items = await loadItems(projectId);
+
+    if (items.isEmpty) {
+      throw Exception("No items to export");
+    }
+
+    final data = items.map((e) {
+      return {
+        'branch': e.branchName,
+        'item_code': e.itemCode,
+        'item_name': e.itemName,
+        'unit_type': e.unit,
+        'quantity': e.quantity,
+      };
+    }).toList();
+
+    await ExcelExporter.saveExcelWithSystemPicker(
+      data,
+      fileName: 'stock_$projectId.xlsx',
+    );
   }
 }

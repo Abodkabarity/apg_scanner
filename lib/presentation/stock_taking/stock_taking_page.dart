@@ -1,5 +1,4 @@
 import 'package:apg_scanner/core/app_color/app_color.dart';
-import 'package:apg_scanner/core/app_images/app_images.dart';
 import 'package:apg_scanner/data/model/products_model.dart';
 import 'package:apg_scanner/data/model/project_model.dart';
 import 'package:apg_scanner/presentation/stock_taking/product_details_block.dart';
@@ -17,6 +16,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/di/injection.dart';
 import '../../core/session/user_session.dart';
 import '../widgets/background_widget.dart';
+import '../widgets/top_snackbar.dart';
 
 class StockTakingPage extends StatelessWidget {
   StockTakingPage({super.key, required this.projects});
@@ -75,10 +75,11 @@ class StockTakingPage extends StatelessWidget {
         BlocListener<StockBloc, StockState>(
           listenWhen: (prev, curr) =>
               curr.productAlreadyExists &&
-              !prev.productAlreadyExists &&
+              !curr.productExistsDialogShown &&
               curr.currentProduct != null,
           listener: (context, state) async {
             final bloc = context.read<StockBloc>();
+            bloc.add(const MarkProductExistsDialogShownEvent());
 
             final result = await showDialog<bool>(
               context: context,
@@ -92,16 +93,24 @@ class StockTakingPage extends StatelessWidget {
                   TextButton(
                     onPressed: () {
                       Navigator.pop(context, false);
+                      nameController.clear();
+                      scanController.clear();
                       FocusScope.of(context).unfocus();
                     },
-                    child: const Text("No"),
+                    child: const Text(
+                      "No",
+                      style: TextStyle(color: AppColor.secondaryColor),
+                    ),
                   ),
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context, true);
                       FocusScope.of(context).unfocus();
                     },
-                    child: const Text("Yes"),
+                    child: const Text(
+                      "Yes",
+                      style: TextStyle(color: AppColor.secondaryColor),
+                    ),
                   ),
                 ],
               ),
@@ -119,7 +128,9 @@ class StockTakingPage extends StatelessWidget {
               bloc.add(ResetFormEvent());
             }
 
+            /*
             bloc.add(const ClearProductAlreadyExistsFlagEvent());
+*/
           },
         ),
         BlocListener<StockBloc, StockState>(
@@ -127,11 +138,11 @@ class StockTakingPage extends StatelessWidget {
           listener: (context, state) {
             if (state.success == null) return;
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.success!),
-                backgroundColor: Colors.green,
-              ),
+            showTopSnackBar(
+              context,
+              message: state.success!,
+              backgroundColor: Colors.green,
+              icon: Icons.check_circle,
             );
 
             scanController.clear();
@@ -145,11 +156,11 @@ class StockTakingPage extends StatelessWidget {
           listenWhen: (prev, curr) => prev.error != curr.error,
           listener: (context, state) {
             if (state.error == null) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error!),
-                backgroundColor: Colors.red,
-              ),
+            showTopSnackBar(
+              context,
+              message: state.error!,
+              backgroundColor: Colors.red.shade700,
+              icon: Icons.error_rounded,
             );
           },
         ),
@@ -165,12 +176,8 @@ class StockTakingPage extends StatelessWidget {
             },
             child: Scaffold(
               appBar: AppBar(
-                leading: Padding(
-                  padding: const EdgeInsets.only(left: 20),
-                  child: Image.asset(AppImages.logo, fit: BoxFit.cover),
-                ),
                 title: Text(
-                  "Stock Taking App",
+                  "Stock Taking",
                   style: TextStyle(
                     fontSize: 25.sp,
                     fontWeight: FontWeight.bold,
@@ -197,11 +204,21 @@ class StockTakingPage extends StatelessWidget {
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
-                              child: const Text("Cancel"),
+                              child: const Text(
+                                "Cancel",
+                                style: TextStyle(
+                                  color: AppColor.secondaryColor,
+                                ),
+                              ),
                             ),
                             ElevatedButton(
                               onPressed: () => Navigator.pop(context, true),
-                              child: const Text("Yes"),
+                              child: const Text(
+                                "Yes",
+                                style: TextStyle(
+                                  color: AppColor.secondaryColor,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -220,14 +237,12 @@ class StockTakingPage extends StatelessWidget {
 
                       showModalBottomSheet(
                         context: context,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(20),
+                        builder: (_) => BlocProvider.value(
+                          value: context.read<StockBloc>(),
+                          child: ExportBottomSheet(
+                            projectId: projects.name,
+                            branchName: branchName!,
                           ),
-                        ),
-                        builder: (_) => ExportBottomSheet(
-                          projectId: projects.name,
-                          branchName: branchName!,
                         ),
                       );
                     },
@@ -293,7 +308,7 @@ class StockTakingPage extends StatelessWidget {
                                                 qty > 0) {
                                               bloc.add(
                                                 ApproveItemEvent(
-                                                  projectId: projects.id
+                                                  projectId: projects.name
                                                       .toString(),
                                                   barcode: scanController.text,
                                                   unit: unit,
@@ -354,7 +369,7 @@ class StockTakingPage extends StatelessWidget {
                                                 qty > 0) {
                                               bloc.add(
                                                 ApproveItemEvent(
-                                                  projectId: projects.id
+                                                  projectId: projects.name
                                                       .toString(),
                                                   barcode: scanController.text,
                                                   unit: unit,
@@ -381,7 +396,7 @@ class StockTakingPage extends StatelessWidget {
 
                                             bloc.add(
                                               ScanBarcodeEvent(
-                                                projectId: projects.id
+                                                projectId: projects.name
                                                     .toString(),
                                                 barcode: barcode,
                                               ),
@@ -439,7 +454,7 @@ class StockTakingPage extends StatelessWidget {
                                                 qty > 0) {
                                               bloc.add(
                                                 ApproveItemEvent(
-                                                  projectId: projects.id
+                                                  projectId: projects.name
                                                       .toString(),
                                                   barcode: scanController.text,
                                                   unit: unit,
@@ -504,6 +519,30 @@ class StockTakingPage extends StatelessWidget {
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
                               ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (state.isProcessing)
+                    Container(
+                      color: Colors.black.withOpacity(0.4),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              state.processingMessage ?? "Processing...",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),

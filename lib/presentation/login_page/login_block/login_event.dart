@@ -19,3 +19,7 @@ class ChangeObscureStatusEvent extends LoginEvent {
   final bool isObscure;
   ChangeObscureStatusEvent(this.isObscure);
 }
+
+class LoginNavConsumed extends LoginEvent {}
+
+class LoginPageOpened extends LoginEvent {}

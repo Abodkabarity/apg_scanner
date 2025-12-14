@@ -28,6 +28,7 @@ class LoginTextField extends StatelessWidget {
         validator: validator,
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: TextStyle(color: AppColor.secondaryColor),
           filled: true,
           errorText: errorText,
           suffixIcon: Icon(icon, color: AppColor.secondaryColor),

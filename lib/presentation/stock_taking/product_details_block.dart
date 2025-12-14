@@ -10,6 +10,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/app_color/app_color.dart';
 import '../../core/di/injection.dart';
 import '../../data/repositories/stock_taking_repository.dart';
+import '../widgets/top_snackbar.dart';
 
 class ProductDetailsBlock extends StatelessWidget {
   const ProductDetailsBlock({
@@ -79,17 +80,16 @@ class ProductDetailsBlock extends StatelessWidget {
                   label: "Approve",
                   icon: Icons.done,
                   onPressed: () {
-                    getIt<StockRepository>().debugPrintAll(projects.id);
+                    getIt<StockRepository>().debugPrintAll(projects.name);
                     final unit = context.read<StockBloc>().state.selectedUnit;
                     final qty = int.tryParse(qtyController.text) ?? 0;
 
                     if (unit == null || qty <= 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text("Unit & Quantity required"),
-                          backgroundColor: Colors.red,
-                          behavior: SnackBarBehavior.floating,
-                        ),
+                      showTopSnackBar(
+                        context,
+                        message: "Unit & Quantity required",
+                        backgroundColor: Colors.red.shade700,
+                        icon: Icons.warning_amber_rounded,
                       );
 
                       return;
@@ -97,7 +97,7 @@ class ProductDetailsBlock extends StatelessWidget {
 
                     context.read<StockBloc>().add(
                       ApproveItemEvent(
-                        projectId: projects.id.toString(),
+                        projectId: projects.name.toString(),
                         barcode: scanController.text,
                         unit: unit,
                         qty: qty,
@@ -118,12 +118,13 @@ class ProductDetailsBlock extends StatelessWidget {
                     final index = bloc.state.selectedIndex;
 
                     if (index == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Please select an item to delete"),
-                          backgroundColor: Colors.red,
-                        ),
+                      showTopSnackBar(
+                        context,
+                        message: "Please select an item to delete",
+                        backgroundColor: Colors.red.shade700,
+                        icon: Icons.delete_outline,
                       );
+
                       return;
                     }
                     final item = bloc.state.items[index];
@@ -143,11 +144,17 @@ class ProductDetailsBlock extends StatelessWidget {
                         ),
                         actions: [
                           TextButton(
-                            child: const Text("Cancel"),
+                            child: const Text(
+                              "Cancel",
+                              style: TextStyle(color: AppColor.secondaryColor),
+                            ),
                             onPressed: () => Navigator.pop(context),
                           ),
                           ElevatedButton(
-                            child: const Text("Delete"),
+                            child: const Text(
+                              "Delete",
+                              style: TextStyle(color: AppColor.secondaryColor),
+                            ),
                             onPressed: () {
                               bloc.add(DeleteStockEvent(item.id));
                               Navigator.pop(context);

@@ -8,7 +8,6 @@ class ExcelExporter {
     List<Map<String, dynamic>> data,
   ) async {
     final excel = Excel.createExcel();
-    excel.tables.keys.toList().forEach(excel.delete);
 
     final sheet = excel['Stock'];
 
@@ -29,6 +28,9 @@ class ExcelExporter {
         TextCellValue(row['branch']?.toString() ?? ''),
       ]);
     }
+    excel.delete('Sheet1');
+
+    excel.setDefaultSheet('Stock');
 
     return Uint8List.fromList(excel.encode()!);
   }

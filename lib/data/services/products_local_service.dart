@@ -1,11 +1,18 @@
 import 'package:hive/hive.dart';
 
+import '../../core/di/injection.dart';
+import '../../core/session/user_session.dart';
 import '../model/products_model.dart';
 
 class ProductsLocalService {
-  static const String boxName = "products_box";
-
   Future<Box> _openBox() async {
+    final userId = getIt<UserSession>().userId;
+
+    if (userId == null || userId.isEmpty) {
+      throw Exception("User not logged in - userId is null");
+    }
+
+    final boxName = "products_box_$userId";
     return await Hive.openBox(boxName);
   }
 

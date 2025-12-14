@@ -17,6 +17,8 @@ class StockState extends Equatable {
   final bool productExistsDialogShown;
   final bool isUploading;
   final String? uploadMessage;
+  final bool isProcessing;
+  final String? processingMessage;
 
   /// suggestions for search (auto-complete)
   final List<ProductModel> suggestions;
@@ -25,6 +27,8 @@ class StockState extends Equatable {
     this.loading = false,
     this.items = const [],
     this.currentProduct,
+    this.isProcessing = false,
+    this.processingMessage,
     this.units = const [],
     this.selectedUnit,
     this.error,
@@ -46,6 +50,9 @@ class StockState extends Equatable {
     List<String>? units,
     String? selectedUnit,
     bool? isUploading,
+    bool? isProcessing,
+    String? processingMessage,
+    bool clearProcessingMessage = false,
     String? uploadMessage,
     bool setNullSelectedUnit = false,
     bool setNullSelectedIndex = false,
@@ -77,6 +84,10 @@ class StockState extends Equatable {
           ? null
           : (selectedIndex ?? this.selectedIndex),
       error: error,
+      isProcessing: isProcessing ?? this.isProcessing,
+      processingMessage: clearProcessingMessage
+          ? null
+          : processingMessage ?? this.processingMessage,
       isUploading: isUploading ?? this.isUploading,
       uploadMessage: uploadMessage ?? this.uploadMessage,
       success: success,
@@ -99,5 +110,9 @@ class StockState extends Equatable {
     filteredItems,
     selectedIndex,
     isUploading,
+    productExistsDialogShown,
+    productAlreadyExists,
+    isProcessing,
+    processingMessage,
   ];
 }

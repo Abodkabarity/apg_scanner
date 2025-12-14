@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/app_color/app_color.dart';
-import '../../../core/di/injection.dart';
-import '../../../data/repositories/branch_repository.dart';
-import '../../../data/services/stock_export_service.dart';
+import '../stock_taking_bloc/stock_taking_bloc.dart';
+import '../stock_taking_bloc/stock_taking_event.dart';
 
 class ExportBottomSheet extends StatelessWidget {
   final String projectId;
@@ -51,43 +51,13 @@ class ExportBottomSheet extends StatelessWidget {
               ),
               onPressed: () async {
                 Navigator.pop(context);
-                final messenger = ScaffoldMessenger.of(context);
 
-                try {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Sending email...")),
-                  );
-
-                  final exportService = getIt<StockExportService>();
-                  final branchRepo = getIt<BranchRepository>();
-
-                  final branchEmail = await branchRepo.getEmailByBranchName(
-                    branchName,
-                  );
-
-                  if (branchEmail == null || branchEmail.isEmpty) {
-                    throw Exception("Branch email not found for $projectId");
-                  }
-
-                  await exportService.sendExcelByEmail(
+                context.read<StockBloc>().add(
+                  SendStockByEmailEvent(
                     projectId: projectId,
-                    toEmail: branchEmail,
-                  );
-
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text("Email sent to $branchEmail ✅"),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } catch (e) {
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text("Failed to send email: $e"),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
+                    branchName: branchName,
+                  ),
+                );
               },
             ),
           ),
@@ -111,18 +81,9 @@ class ExportBottomSheet extends StatelessWidget {
                 ),
               ),
               onPressed: () async {
-                final service = getIt<StockExportService>();
-                final messenger = ScaffoldMessenger.of(context);
-
-                await service.exportAndSaveExcel(projectId);
-
-                if (!context.mounted) return;
-
                 Navigator.pop(context);
 
-                messenger.showSnackBar(
-                  const SnackBar(content: Text("Excel file saved on device")),
-                );
+                context.read<StockBloc>().add(ExportExcelEvent(projectId));
               },
             ),
           ),

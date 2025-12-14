@@ -14,8 +14,9 @@ import '../../core/app_images/app_images.dart';
 import '../../core/di/injection.dart';
 import '../../core/session/user_session.dart';
 import '../../data/repositories/products_repository.dart';
+import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
-import '../login_page/login_page.dart';
+import '../login_page/widgets/auth_gate_widget.dart';
 import '../stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
 import '../stock_taking/stock_taking_bloc/stock_taking_event.dart';
 
@@ -31,11 +32,17 @@ class AddProjectPage extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(color: AppColor.secondaryColor),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Logout"),
+            child: const Text(
+              "Logout",
+              style: TextStyle(color: AppColor.secondaryColor),
+            ),
           ),
         ],
       ),
@@ -45,12 +52,13 @@ class AddProjectPage extends StatelessWidget {
 
     await Supabase.instance.client.auth.signOut();
     getIt<UserSession>().clear();
+    getIt<ProjectRepository>().clearCache();
 
     if (!context.mounted) return;
 
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => LoginPage()),
+      MaterialPageRoute(builder: (_) => const AuthGate()),
       (_) => false,
     );
   }
@@ -135,7 +143,20 @@ class AddProjectPage extends StatelessWidget {
                                     Row(
                                       children: [
                                         Expanded(
-                                          child: DialogDeleteButton(
+                                          child: TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            child: const Text(
+                                              "Cancel",
+                                              style: TextStyle(
+                                                color: AppColor.secondaryColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: ElevatedButton(
                                             onPressed: () {
                                               dialogContext
                                                   .read<ProjectBloc>()
@@ -149,20 +170,16 @@ class AddProjectPage extends StatelessWidget {
                                                   .add(LoadProjectsEvent());
                                               Navigator.pop(dialogContext);
                                             },
-                                            label: "Yes",
-                                            color: Colors.red,
+                                            child: Text(
+                                              "Yes",
+                                              style: TextStyle(
+                                                color: AppColor.secondaryColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                           ),
                                         ),
                                         SizedBox(width: 5.w),
-                                        Expanded(
-                                          child: DialogDeleteButton(
-                                            onPressed: () {
-                                              Navigator.pop(dialogContext);
-                                            },
-                                            label: "No",
-                                            color: Colors.green,
-                                          ),
-                                        ),
                                       ],
                                     ),
                                   ],
@@ -321,7 +338,7 @@ class ListProjectWidget extends StatelessWidget {
                 create: (_) => StockBloc(
                   getIt<StockRepository>(),
                   getIt<ProductsRepository>(),
-                )..add(LoadStockEvent(projects.id.toString())),
+                )..add(LoadStockEvent(projects.name.toString())),
                 child: StockTakingPage(projects: projects),
               ),
             ),

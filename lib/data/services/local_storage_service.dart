@@ -5,19 +5,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../model/project_model.dart';
 
 class LocalStorageService {
-  static const String _key = "projects_data";
-
-  Future<void> saveProjects(List<ProjectModel> projects) async {
+  // ================= SAVE =================
+  Future<void> saveProjects(String key, List<ProjectModel> projects) async {
     final prefs = await SharedPreferences.getInstance();
 
     final encoded = jsonEncode(projects.map((p) => p.toJson()).toList());
 
-    await prefs.setString(_key, encoded);
+    await prefs.setString(key, encoded);
   }
 
-  Future<List<ProjectModel>> loadProjects() async {
+  // ================= LOAD =================
+  Future<List<ProjectModel>> loadProjects(String key) async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_key);
+    final jsonString = prefs.getString(key);
 
     if (jsonString == null || jsonString.isEmpty) {
       return [];
@@ -25,14 +25,17 @@ class LocalStorageService {
 
     try {
       final decoded = jsonDecode(jsonString) as List;
-      return decoded.map((e) => ProjectModel.fromJson(e)).toList();
-    } catch (e) {
+      return decoded
+          .map((e) => ProjectModel.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (_) {
       return [];
     }
   }
 
-  Future<void> clearProjects() async {
+  // ================= CLEAR =================
+  Future<void> clearProjects(String key) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_key);
+    await prefs.remove(key);
   }
 }

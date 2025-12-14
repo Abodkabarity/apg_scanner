@@ -1,11 +1,12 @@
 import 'package:apg_scanner/presentation/login_page/login_block/login_bloc.dart';
 import 'package:apg_scanner/presentation/login_page/login_block/login_event.dart';
+import 'package:apg_scanner/presentation/login_page/widgets/auth_gate_widget.dart';
 import 'package:apg_scanner/presentation/login_page/widgets/login_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../add_project/add_project_page.dart';
+import '../widgets/top_snackbar.dart';
 import 'login_block/login_state.dart';
 
 class LoginPage extends StatelessWidget {
@@ -18,28 +19,28 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-      },
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         body: BlocListener<LoginBloc, LoginState>(
           listener: (context, state) {
             if (state.status == LoginStatus.failure && state.error != null) {
-              ScaffoldMessenger.of(
+              showTopSnackBar(
                 context,
-              ).showSnackBar(SnackBar(content: Text(state.error!)));
+                message: state.error!,
+                backgroundColor: Colors.red.shade700,
+                icon: Icons.error_outline,
+              );
             }
-
             if (state.status == LoginStatus.success) {
-              Navigator.pushReplacement(
+              Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => AddProjectPage()),
+                MaterialPageRoute(builder: (_) => const AuthGate()),
+                (_) => false,
               );
             }
           },
           child: Stack(
             children: [
-              /// Background
               Positioned.fill(
                 child: Image.asset(
                   "assets/images/background.png",
@@ -47,7 +48,6 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
 
-              /// Login Card
               Center(
                 child: Container(
                   margin: EdgeInsets.only(top: 200.h),
@@ -63,6 +63,9 @@ class LoginPage extends StatelessWidget {
                         title: "APG Stock Taking",
                         emailController: emailController,
                         passwordController: passwordController,
+                        formKey: _formKey,
+                        error: state.error,
+                        isObscure: state.isObscure,
                         onPressed: () {
                           if (_formKey.currentState?.validate() != true) return;
 
@@ -73,21 +76,17 @@ class LoginPage extends StatelessWidget {
                             ),
                           );
                         },
-                        error: state.error,
-                        formKey: _formKey,
                         onCheckBoxChanged: (value) {
                           context.read<LoginBloc>().add(
                             ChangeObscureStatusEvent(value!),
                           );
                         },
-                        isObscure: state.isObscure,
                       );
                     },
                   ),
                 ),
               ),
 
-              /// 🔄 Loading Overlay
               BlocBuilder<LoginBloc, LoginState>(
                 builder: (context, state) {
                   if (!state.isLoading) return const SizedBox();

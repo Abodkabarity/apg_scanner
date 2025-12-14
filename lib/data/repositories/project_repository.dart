@@ -12,27 +12,60 @@ class ProjectRepository {
 
   ProjectRepository(this.local, this.session);
 
-  Future<void> loadAllProjects() async {
-    projects = await local.loadProjects();
+  // 🔑 مفتاح التخزين حسب المستخدم
+  String _userKey() {
+    final userId = session.userId;
+    if (userId == null) {
+      throw Exception("User not logged in");
+    }
+    return 'projects_$userId';
   }
 
+  // ================= LOAD =================
+  Future<void> loadAllProjects() async {
+    final userId = session.userId;
+    if (userId == null) {
+      projects = [];
+      return;
+    }
+
+    // 🔥 تحميل مشاريع هذا المستخدم فقط
+    projects = await local.loadProjects(_userKey());
+  }
+
+  // ================= CREATE =================
   Future<ProjectModel> createProject(String name) async {
+    final userId = session.userId;
+    if (userId == null) {
+      throw Exception("User not logged in");
+    }
+
     final newProject = ProjectModel(
       id: const Uuid().v4(),
       name: name,
       branch: session.branch!,
       createdAt: DateTime.now(),
+      userId: userId,
     );
+
     projects.add(newProject);
 
-    await local.saveProjects(projects);
+    // 🔥 حفظ مشاريع هذا المستخدم فقط
+    await local.saveProjects(_userKey(), projects);
 
     return newProject;
   }
 
+  // ================= DELETE =================
   Future<void> deleteProject(String id) async {
     projects.removeWhere((p) => p.id == id);
-    await local.saveProjects(projects);
+
+    await local.saveProjects(_userKey(), projects);
+  }
+
+  // ================= OTHERS =================
+  void clearCache() {
+    projects.clear();
   }
 
   List<ProjectModel> getAll() => projects;

@@ -1,8 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/di/injection.dart';
 import '../../../data/model/stock_taking_model.dart';
+import '../../../data/repositories/branch_repository.dart';
 import '../../../data/repositories/products_repository.dart';
 import '../../../data/repositories/stock_taking_repository.dart';
+import '../../../data/services/stock_export_service.dart';
 import 'stock_taking_event.dart';
 import 'stock_taking_state.dart';
 
@@ -22,6 +25,10 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     on<ClearProductAlreadyExistsFlagEvent>((event, emit) {
       emit(state.copyWith(productAlreadyExists: false));
     });
+    on<SendStockByEmailEvent>(_onSendStockByEmail);
+
+    on<ExportExcelEvent>(_onExportExcel);
+
     on<UploadStockEvent>(_onUploadStock);
 
     on<ChangeUnitEvent>((event, emit) {
@@ -141,6 +148,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         success: "Item saved successfully",
         error: null,
         suggestions: [],
+        productAlreadyExists: false,
         productExistsDialogShown: false,
       ),
     );
@@ -195,10 +203,11 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         setNullSelectedUnit: true,
         success: null,
         setNullSelectedIndex: true,
+        productExistsDialogShown: false,
+        productAlreadyExists: false,
 
         error: null,
         selectedIndex: null,
-        productExistsDialogShown: false,
         suggestions: [],
       ),
     );
@@ -258,6 +267,8 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         setNullSelectedUnit: existingItem == null,
         productAlreadyExists: existingItem != null,
         suggestions: [],
+        productExistsDialogShown: false,
+
         error: null,
         success: null,
       ),
@@ -350,6 +361,86 @@ class StockBloc extends Bloc<StockEvent, StockState> {
           isUploading: false,
           error: e.toString(),
           uploadMessage: null,
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportExcel(
+    ExportExcelEvent event,
+    Emitter<StockState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        isProcessing: true,
+        processingMessage: "Saving file to device...",
+        error: null,
+        success: null,
+      ),
+    );
+
+    try {
+      await repo.exportExcel(projectId: event.projectId);
+
+      emit(
+        state.copyWith(
+          isProcessing: false,
+          clearProcessingMessage: true,
+          success: "File saved successfully",
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isProcessing: false,
+          clearProcessingMessage: true,
+          error: e.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onSendStockByEmail(
+    SendStockByEmailEvent event,
+    Emitter<StockState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        isProcessing: true,
+        processingMessage: "Sending email...",
+        error: null,
+        success: null,
+      ),
+    );
+
+    try {
+      final branchRepo = getIt<BranchRepository>();
+      final exportService = getIt<StockExportService>();
+
+      final email = await branchRepo.getEmailByBranchName(event.branchName);
+
+      if (email == null || email.isEmpty) {
+        throw Exception("Branch email not found");
+      }
+
+      await exportService.sendExcelByEmail(
+        projectId: event.projectId,
+        toEmail: email,
+      );
+
+      emit(
+        state.copyWith(
+          isProcessing: false,
+          clearProcessingMessage: true,
+          success: "Email sent to $email",
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isProcessing: false,
+          clearProcessingMessage: true,
+          error: e.toString(),
         ),
       );
     }

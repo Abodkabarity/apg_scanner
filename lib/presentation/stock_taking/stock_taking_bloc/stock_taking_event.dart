@@ -88,3 +88,18 @@ class UploadStockEvent extends StockEvent {
   final String projectId;
   const UploadStockEvent({required this.projectId});
 }
+
+class ExportExcelEvent extends StockEvent {
+  final String projectId;
+  const ExportExcelEvent(this.projectId);
+}
+
+class SendStockByEmailEvent extends StockEvent {
+  final String projectId;
+  final String branchName;
+
+  const SendStockByEmailEvent({
+    required this.projectId,
+    required this.branchName,
+  });
+}
