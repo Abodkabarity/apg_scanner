@@ -12,20 +12,20 @@ class ExcelExporter {
     final sheet = excel['Stock'];
 
     sheet.appendRow([
+      TextCellValue('Branch'),
       TextCellValue('Item Code'),
       TextCellValue('Item Name'),
       TextCellValue('Unit'),
       TextCellValue('Quantity'),
-      TextCellValue('Branch'),
     ]);
 
     for (final row in data) {
       sheet.appendRow([
+        TextCellValue(row['branch']?.toString() ?? ''),
         TextCellValue(row['item_code']?.toString() ?? ''),
         TextCellValue(row['item_name']?.toString() ?? ''),
-        TextCellValue(row['unit_type']?.toString() ?? ''),
-        IntCellValue(int.tryParse(row['quantity']?.toString() ?? '0') ?? 0),
-        TextCellValue(row['branch']?.toString() ?? ''),
+        TextCellValue('Box'),
+        TextCellValue(row['sub_quantity']?.toString() ?? ''),
       ]);
     }
     excel.delete('Sheet1');
