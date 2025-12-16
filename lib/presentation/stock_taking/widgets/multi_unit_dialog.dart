@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../core/app_color/app_color.dart';
 import '../../../data/model/stock_item_group.dart';
 
 class MultiUnitEditDialog extends StatefulWidget {
   final StockItemGroup group;
-  final num numberSubUnit;
-  final void Function(Map<String, int> newUnitQty) onApply;
+  final List<String> allUnits;
+  final int numberSubUnit;
+  final void Function(Map<String, int>) onApply;
 
   const MultiUnitEditDialog({
     super.key,
     required this.group,
+    required this.allUnits,
     required this.numberSubUnit,
     required this.onApply,
   });
@@ -20,27 +24,20 @@ class MultiUnitEditDialog extends StatefulWidget {
 
 class _MultiUnitEditDialogState extends State<MultiUnitEditDialog> {
   late Map<String, TextEditingController> controllers;
-
-  double totalSubQty = 0;
+  double total = 0;
 
   @override
   void initState() {
     super.initState();
 
     controllers = {
-      for (final e in widget.group.unitQty.entries)
-        e.key: TextEditingController(text: e.value.toString()),
+      for (final unit in widget.allUnits)
+        unit: TextEditingController(
+          text: widget.group.unitQty[unit]?.toString() ?? "0",
+        ),
     };
 
     _recalc();
-  }
-
-  @override
-  void dispose() {
-    for (final c in controllers.values) {
-      c.dispose();
-    }
-    super.dispose();
   }
 
   void _recalc() {
@@ -49,24 +46,31 @@ class _MultiUnitEditDialogState extends State<MultiUnitEditDialog> {
     controllers.forEach((unit, ctrl) {
       final qty = int.tryParse(ctrl.text) ?? 0;
 
-      if (unit.toLowerCase() == 'box') {
-        sum += qty.toDouble();
+      if (unit.toLowerCase() == "box") {
+        sum += qty;
       } else {
         if (widget.numberSubUnit > 0) {
           sum += qty / widget.numberSubUnit;
         } else {
-          sum += qty.toDouble();
+          sum += qty;
         }
       }
     });
 
-    setState(() => totalSubQty = sum);
+    setState(() => total = sum);
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.group.itemName),
+      title: Text(
+        widget.group.itemName,
+        style: TextStyle(
+          fontSize: 15.sp,
+          fontWeight: FontWeight.bold,
+          color: AppColor.secondaryColor,
+        ),
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -75,21 +79,26 @@ class _MultiUnitEditDialogState extends State<MultiUnitEditDialog> {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      e.key,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
+                  Expanded(child: Text(e.key)),
                   SizedBox(
                     width: 90,
                     child: TextField(
                       controller: e.value,
+                      textAlign: TextAlign.center,
                       keyboardType: TextInputType.number,
-                      onChanged: (_) => _recalc(), // ✅ تحديث مباشر
-                      decoration: const InputDecoration(
+                      onChanged: (_) => _recalc(),
+                      decoration: InputDecoration(
                         isDense: true,
-                        border: OutlineInputBorder(),
+                        fillColor: Colors.white,
+                        filled: true,
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15.r),
+                          borderSide: BorderSide(color: AppColor.primaryColor),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15.r),
+                          borderSide: BorderSide(color: AppColor.primaryColor),
+                        ),
                       ),
                     ),
                   ),
@@ -102,12 +111,19 @@ class _MultiUnitEditDialogState extends State<MultiUnitEditDialog> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                "Total",
-                style: TextStyle(fontWeight: FontWeight.bold),
+                "Total Quantity",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColor.secondaryColor,
+                ),
               ),
               Text(
-                totalSubQty.toStringAsFixed(2), // ✅ الصحيح
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                total.toStringAsFixed(2),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16.sp,
+                  color: AppColor.secondaryColor,
+                ),
               ),
             ],
           ),
@@ -115,8 +131,68 @@ class _MultiUnitEditDialogState extends State<MultiUnitEditDialog> {
       ),
       actions: [
         TextButton(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text(
+                  "Delete Item",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp,
+                  ),
+                ),
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Are you sure you want to delete?",
+                      textAlign: TextAlign.start,
+                      style: TextStyle(color: AppColor.secondaryColor),
+                    ),
+                    Text(
+                      widget.group.itemName,
+                      textAlign: TextAlign.start,
+                      style: TextStyle(
+                        color: AppColor.secondaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    child: const Text(
+                      "No",
+                      style: TextStyle(color: AppColor.secondaryColor),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  ElevatedButton(
+                    child: const Text(
+                      "Yes",
+                      style: TextStyle(color: AppColor.secondaryColor),
+                    ),
+                    onPressed: () {
+                      widget.onApply(const {});
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+          child: const Text("Delete Item", style: TextStyle(color: Colors.red)),
+        ),
+        TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
+          child: Text(
+            "Cancel",
+            style: TextStyle(color: AppColor.secondaryColor, fontSize: 14.sp),
+          ),
         ),
         ElevatedButton(
           onPressed: () {
@@ -129,7 +205,11 @@ class _MultiUnitEditDialogState extends State<MultiUnitEditDialog> {
             widget.onApply(result);
             Navigator.pop(context);
           },
-          child: const Text("Apply"),
+
+          child: Text(
+            "Apply",
+            style: TextStyle(color: AppColor.secondaryColor, fontSize: 15.sp),
+          ),
         ),
       ],
     );

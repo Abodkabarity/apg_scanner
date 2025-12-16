@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/app_color/app_color.dart';
 import '../../../core/di/injection.dart';
 import '../../../core/session/user_session.dart';
 import '../../add_project/add_project_page.dart';
@@ -51,7 +52,9 @@ class _AuthGateState extends State<AuthGate> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(
+              child: CircularProgressIndicator(color: AppColor.primaryColor),
+            ),
           );
         }
 

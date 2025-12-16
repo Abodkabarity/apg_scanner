@@ -8,11 +8,13 @@ import '../stock_taking_bloc/stock_taking_event.dart';
 
 class ExportBottomSheet extends StatelessWidget {
   final String projectId;
+  final String projectName;
   final String branchName;
   const ExportBottomSheet({
     super.key,
     required this.projectId,
     required this.branchName,
+    required this.projectName,
   });
 
   @override
@@ -56,6 +58,7 @@ class ExportBottomSheet extends StatelessWidget {
                   SendStockByEmailEvent(
                     projectId: projectId,
                     branchName: branchName,
+                    projectName: projectName,
                   ),
                 );
               },
@@ -83,7 +86,9 @@ class ExportBottomSheet extends StatelessWidget {
               onPressed: () async {
                 Navigator.pop(context);
 
-                context.read<StockBloc>().add(ExportExcelEvent(projectId));
+                context.read<StockBloc>().add(
+                  ExportExcelEvent(projectId, projectName: projectName),
+                );
               },
             ),
           ),

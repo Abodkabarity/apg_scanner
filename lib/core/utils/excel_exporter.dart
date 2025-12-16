@@ -8,9 +8,9 @@ class ExcelExporter {
     List<Map<String, dynamic>> data,
   ) async {
     final excel = Excel.createExcel();
-
     final sheet = excel['Stock'];
 
+    // 🔹 Header
     sheet.appendRow([
       TextCellValue('Branch'),
       TextCellValue('Item Code'),
@@ -19,17 +19,42 @@ class ExcelExporter {
       TextCellValue('Quantity'),
     ]);
 
+    final Map<String, Map<String, dynamic>> grouped = {};
+
     for (final row in data) {
+      final branch = row['branch']?.toString() ?? '';
+      final itemCode = row['item_code']?.toString() ?? '';
+      final itemName = row['item_name']?.toString() ?? '';
+
+      final key = '$branch|$itemCode';
+
+      final double subQty =
+          double.tryParse(row['sub_quantity']?.toString() ?? '0') ?? 0;
+
+      if (!grouped.containsKey(key)) {
+        grouped[key] = {
+          'branch': branch,
+          'item_code': itemCode,
+          'item_name': itemName,
+          'total_qty': subQty,
+        };
+      } else {
+        grouped[key]!['total_qty'] =
+            (grouped[key]!['total_qty'] as double) + subQty;
+      }
+    }
+
+    for (final g in grouped.values) {
       sheet.appendRow([
-        TextCellValue(row['branch']?.toString() ?? ''),
-        TextCellValue(row['item_code']?.toString() ?? ''),
-        TextCellValue(row['item_name']?.toString() ?? ''),
+        TextCellValue(g['branch']),
+        TextCellValue(g['item_code']),
+        TextCellValue(g['item_name']),
         TextCellValue('Box'),
-        TextCellValue(row['sub_quantity']?.toString() ?? ''),
+        TextCellValue((g['total_qty'] as double).toStringAsFixed(2)),
       ]);
     }
-    excel.delete('Sheet1');
 
+    excel.delete('Sheet1');
     excel.setDefaultSheet('Stock');
 
     return Uint8List.fromList(excel.encode()!);

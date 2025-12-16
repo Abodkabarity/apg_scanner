@@ -48,7 +48,8 @@ class StockItemModel {
 
   @HiveField(14)
   final DateTime updatedAt;
-
+  @HiveField(15)
+  final String projectName;
   StockItemModel({
     required this.id,
     required this.projectId,
@@ -59,17 +60,19 @@ class StockItemModel {
     required this.unit,
     required this.subUnit,
     required this.quantity,
-    required this.subQuantity, // 👈 تمت إضافته
+    required this.subQuantity,
     required this.barcode,
     required this.isDeleted,
     required this.isSynced,
     required this.createdAt,
     required this.updatedAt,
+    required this.projectName,
   });
 
   StockItemModel copyWith({
     String? id,
     String? projectId,
+    String? projectName,
     String? branchName,
     String? itemId,
     String? itemCode,
@@ -100,13 +103,14 @@ class StockItemModel {
       isSynced: isSynced ?? this.isSynced,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      projectName: projectName ?? this.projectName,
     );
   }
 
   factory StockItemModel.fromJson(Map<String, dynamic> json) {
     return StockItemModel(
       id: json['id'],
-      projectId: json['project_name'],
+      projectId: json['project_id'],
       branchName: json['branch_name'] ?? '',
       itemId: json['item_id'],
       itemCode: json['item_code'],
@@ -114,19 +118,21 @@ class StockItemModel {
       unit: json['unit'] ?? '',
       subUnit: json['subunit'] ?? '',
       quantity: json['quantity'] ?? 0,
-      subQuantity: json['sub_quantity'] ?? 0, // 👈 تمت إضافته
+      subQuantity: json['sub_quantity'] ?? 0,
       barcode: json['barcode'] ?? '',
       isDeleted: json['is_deleted'] ?? false,
       isSynced: json['is_synced'] ?? false,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
+      projectName: json['project_name'] ?? "New Project",
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'project_name': projectId,
+      'project_id': projectId,
+      'project_name': projectName,
       'branch_name': branchName,
       'item_id': itemId,
       'item_code': itemCode,
@@ -134,7 +140,7 @@ class StockItemModel {
       'unit': unit,
       'subunit': subUnit,
       'quantity': quantity,
-      'sub_quantity': subQuantity, // 👈 تمت إضافته
+      'sub_quantity': subQuantity,
       'barcode': barcode,
       'is_deleted': isDeleted,
       'is_synced': isSynced,

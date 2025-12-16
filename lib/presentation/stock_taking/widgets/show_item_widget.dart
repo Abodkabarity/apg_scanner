@@ -9,9 +9,14 @@ import '../../../core/app_color/app_color.dart';
 import 'multi_unit_dialog.dart';
 
 class ShowItemsList extends StatelessWidget {
-  const ShowItemsList({super.key, required this.projectId});
+  const ShowItemsList({
+    super.key,
+    required this.projectId,
+    required this.projectName,
+  });
 
   final String projectId;
+  final String projectName;
 
   @override
   Widget build(BuildContext context) {
@@ -77,83 +82,70 @@ class ShowItemsList extends StatelessWidget {
                             fontSize: 15.sp,
                           ),
                         ),
-                        onTap: () {
-                          if (!group.isMultiUnit) {
-                            showDialog(
-                              context: context,
-                              builder: (dialogContext) => AlertDialog(
-                                title: const Text(
-                                  "Edit Item",
-                                  style: TextStyle(
-                                    color: AppColor.secondaryColor,
-                                  ),
-                                ),
-                                content: const Text(
-                                  "Do you want to edit this item?",
-                                  style: TextStyle(
-                                    color: AppColor.secondaryColor,
-                                  ),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(dialogContext),
-                                    child: const Text(
-                                      "No",
-                                      style: TextStyle(
-                                        color: AppColor.secondaryColor,
-                                      ),
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      final unit = group.unitQty.keys.first;
-                                      final qty = group.unitQty[unit] ?? 0;
-                                      final rowId = group.unitId[unit]!;
-
-                                      context.read<StockBloc>().add(
-                                        EditSingleUnitFromListEvent(
-                                          group: group,
-                                          rowId: rowId,
-                                          unit: unit,
-                                          qty: qty,
-                                        ),
-                                      );
-
-                                      Navigator.pop(dialogContext);
-                                    },
-                                    child: const Text(
-                                      "Yes",
-                                      style: TextStyle(
-                                        color: AppColor.secondaryColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                            return;
-                          }
+                        onTap: () async {
                           final bloc = context.read<StockBloc>();
+
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text(
+                                "Edit Item",
+                                style: TextStyle(
+                                  color: AppColor.secondaryColor,
+                                ),
+                              ),
+                              content: const Text(
+                                "Do you want to edit this item?",
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text(
+                                    "No",
+                                    style: TextStyle(
+                                      color: AppColor.secondaryColor,
+                                    ),
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text(
+                                    "Yes",
+                                    style: TextStyle(
+                                      color: AppColor.secondaryColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (!context.mounted) return;
+
+                          if (confirm != true) return;
 
                           final product = bloc.productsRepo.products.firstWhere(
                             (p) => p.itemCode == group.itemCode,
                           );
+
                           showDialog(
+                            barrierDismissible: false,
                             context: context,
                             builder: (_) => MultiUnitEditDialog(
                               group: group,
+                              allUnits: bloc.productsRepo.getUnitsForProduct(
+                                product,
+                              ),
+                              numberSubUnit: product.numberSubUnit.toInt(),
                               onApply: (newUnitQty) {
-                                context.read<StockBloc>().add(
+                                bloc.add(
                                   UpdateMultiUnitEvent(
                                     projectId: projectId,
-
                                     group: group,
                                     newUnitQty: newUnitQty,
+                                    projectName: projectName,
                                   ),
                                 );
                               },
-                              numberSubUnit: product.numberSubUnit,
                             ),
                           );
                         },

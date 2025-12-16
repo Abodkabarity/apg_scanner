@@ -115,15 +115,20 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     } catch (_) {
       existingItem = null;
     }
+    final units = productsRepo.getUnitsForProduct(product);
+
+    final String? defaultUnit = units.any((u) => u.toLowerCase() == 'box')
+        ? units.firstWhere((u) => u.toLowerCase() == 'box')
+        : null;
 
     emit(
       state.copyWith(
         loading: false,
         currentProduct: product,
-        units: productsRepo.getUnitsForProduct(product),
+        units: units,
 
-        selectedUnit: null,
-        setNullSelectedUnit: true,
+        selectedUnit: defaultUnit,
+        setNullSelectedUnit: defaultUnit == null,
 
         productAlreadyExists: existingItem != null,
         error: null,
@@ -162,15 +167,9 @@ class StockBloc extends Bloc<StockEvent, StockState> {
 
     final String? editingRowId = state.editingRowId;
 
-    /* =========================================================
-     ✅ حالة EDIT (تعديل عنصر موجود)
-     - من القائمة (Unit واحدة)
-     - أو بعد الرجوع من MultiUnit
-     ========================================================= */
     if (state.duplicateAction == DuplicateAction.edit && editingRowId != null) {
       final row = state.items.firstWhere((e) => e.id == editingRowId);
 
-      // 🔹 إذا تغيّرت الوحدة أثناء التعديل
       if (row.unit.toLowerCase() != event.unit.toLowerCase()) {
         final target = await repo.findExistingItemByUnit(
           event.projectId,
@@ -179,17 +178,14 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         );
 
         if (target != null) {
-          // دمج مع سطر موجود بنفس الوحدة
           await repo.updateItemFull(
             item: target,
             unit: target.unit,
             subQty: target.subQuantity + newSubQty,
           );
 
-          // حذف السطر القديم
           await repo.delete(row.id);
         } else {
-          // تعديل نفس السطر مع تغيير الوحدة
           await repo.updateItemFull(
             item: row,
             unit: event.unit,
@@ -197,7 +193,6 @@ class StockBloc extends Bloc<StockEvent, StockState> {
           );
         }
       } else {
-        // نفس الوحدة → تعديل مباشر
         await repo.updateItemFull(item: row, unit: row.unit, subQty: newSubQty);
       }
 
@@ -223,12 +218,9 @@ class StockBloc extends Bloc<StockEvent, StockState> {
           productExistsDialogShown: false,
         ),
       );
-      return; // ⛔ مهم جدًا: يمنع الدخول في منطق ADD
+      return;
     }
 
-    /* =========================================================
-     ✅ حالة ADD (السلوك القديم)
-     ========================================================= */
     final existing = await repo.findExistingItemByUnit(
       event.projectId,
       product.itemCode,
@@ -246,6 +238,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     } else {
       await repo.saveNewItem(
         projectId: event.projectId,
+        projectName: event.projectName,
         barcode: event.barcode,
         product: product,
         subQty: newSubQty,
@@ -453,12 +446,26 @@ class StockBloc extends Bloc<StockEvent, StockState> {
       existingItem = null;
     }
 
+    final units = productsRepo.getUnitsForProduct(product);
+
+    String? selectedUnit;
+
+    if (existingItem != null) {
+      selectedUnit = existingItem.unit;
+    } else {
+      selectedUnit = units.any((u) => u.toLowerCase() == 'box')
+          ? units.firstWhere((u) => u.toLowerCase() == 'box')
+          : null;
+    }
+
     emit(
       state.copyWith(
         currentProduct: product,
-        units: productsRepo.getUnitsForProduct(product),
-        selectedUnit: existingItem?.unit,
-        setNullSelectedUnit: existingItem == null,
+        units: units,
+
+        selectedUnit: selectedUnit,
+        setNullSelectedUnit: selectedUnit == null,
+
         productAlreadyExists: existingItem != null,
         suggestions: [],
         productExistsDialogShown: false,
@@ -574,7 +581,10 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     );
 
     try {
-      await repo.exportExcel(projectId: event.projectId);
+      await repo.exportExcel(
+        projectId: event.projectId,
+        projectName: event.projectName,
+      );
 
       emit(
         state.copyWith(
@@ -620,6 +630,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
       await exportService.sendExcelByEmail(
         projectId: event.projectId,
         toEmail: email,
+        projectName: event.projectName,
       );
 
       emit(
@@ -677,7 +688,6 @@ class StockBloc extends Bloc<StockEvent, StockState> {
             throw Exception("Product not found for grouping: $itemCode"),
       );
 
-      /// 🔹 تحويل subQty إلى qty حقيقية حسب الوحدة
       int qtyFromSub(String unit, double subQty) {
         if (unit.toLowerCase() == 'box') {
           return subQty.round();
@@ -735,32 +745,59 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     );
 
     double subFromQty(String unit, int qty) {
-      if (unit.toLowerCase() == 'box') {
-        return qty.toDouble();
-      }
-
-      if (product.numberSubUnit <= 0) {
-        return qty.toDouble();
-      }
-
+      if (unit.toLowerCase() == 'box') return qty.toDouble();
+      if (product.numberSubUnit <= 0) return qty.toDouble();
       return qty / product.numberSubUnit;
     }
 
-    for (final unit in event.newUnitQty.keys) {
-      final rowId = event.group.unitId[unit];
-      if (rowId == null) continue;
+    for (final entry in event.newUnitQty.entries) {
+      final unit = entry.key;
+      final qty = entry.value;
 
-      final row = state.items.firstWhere((e) => e.id == rowId);
-      final qty = event.newUnitQty[unit] ?? 0;
+      final existingRowId = event.group.unitId[unit];
 
       if (qty <= 0) {
-        await repo.delete(row.id);
+        if (existingRowId != null) {
+          await repo.delete(existingRowId);
+        }
         continue;
       }
 
-      final newSubQty = subFromQty(unit, qty);
+      final subQty = subFromQty(unit, qty);
 
-      await repo.updateItem(item: row, subQty: newSubQty);
+      if (existingRowId != null) {
+        final row = state.items.firstWhere((e) => e.id == existingRowId);
+        await repo.updateItemFull(item: row, unit: unit, subQty: subQty);
+      } else {
+        await repo.saveNewItem(
+          projectId: event.projectId,
+          projectName: event.projectName,
+          barcode: event.group.barcode,
+          product: product,
+          unit: unit,
+          subQty: subQty,
+        );
+      }
+    }
+    if (event.newUnitQty.isEmpty) {
+      for (final rowId in event.group.unitId.values) {
+        await repo.delete(rowId);
+      }
+
+      final items = await repo.loadItems(event.projectId);
+      final groups = _groupItemsByItemCode(items);
+
+      emit(
+        state.copyWith(
+          items: items,
+          filteredItems: items,
+          groupedItems: groups,
+          filteredGroupedItems: groups,
+          success: "Item deleted",
+          error: null,
+        ),
+      );
+      return;
     }
 
     final items = await repo.loadItems(event.projectId);

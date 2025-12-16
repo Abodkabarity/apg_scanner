@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../core/app_color/app_color.dart';
 import '../../core/di/injection.dart';
 import '../../data/repositories/stock_taking_repository.dart';
 import '../widgets/top_snackbar.dart';
@@ -19,10 +18,13 @@ class ProductDetailsBlock extends StatelessWidget {
     required this.qtyController,
     required this.scanController,
     required this.projects,
+    required this.qtyFocusNode,
   });
   final TextEditingController nameController;
   final TextEditingController qtyController;
   final TextEditingController scanController;
+  final FocusNode qtyFocusNode;
+
   final ProjectModel projects;
   @override
   Widget build(BuildContext context) {
@@ -56,16 +58,24 @@ class ProductDetailsBlock extends StatelessWidget {
               Expanded(
                 flex: 3,
                 child: TextField(
+                  focusNode: qtyFocusNode,
                   controller: qtyController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     fillColor: Colors.white,
                     filled: true,
                     labelText: "Quantity",
+
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25.r),
                     ),
                   ),
+                  onEditingComplete: () {
+                    qtyFocusNode.unfocus();
+                  },
+                  onSubmitted: (_) {
+                    qtyFocusNode.unfocus();
+                  },
                 ),
               ),
             ],
@@ -73,101 +83,40 @@ class ProductDetailsBlock extends StatelessWidget {
 
           SizedBox(height: 25.h),
 
-          Row(
-            children: [
-              Expanded(
-                child: SubmitButton(
-                  label: "Approve",
-                  icon: Icons.done,
-                  onPressed: () {
-                    getIt<StockRepository>().debugPrintAll(projects.name);
-                    final unit = context.read<StockBloc>().state.selectedUnit;
-                    final qty = int.tryParse(qtyController.text) ?? 0;
+          SizedBox(
+            width: 250.w,
+            height: 40.h,
+            child: SubmitButton(
+              label: "Approve",
+              icon: Icons.done,
+              onPressed: () {
+                getIt<StockRepository>().debugPrintAll(projects.id);
+                final unit = context.read<StockBloc>().state.selectedUnit;
+                final qty = int.tryParse(qtyController.text) ?? 0;
 
-                    if (unit == null || qty <= 0) {
-                      showTopSnackBar(
-                        context,
-                        message: "Unit & Quantity required",
-                        backgroundColor: Colors.red.shade700,
-                        icon: Icons.warning_amber_rounded,
-                      );
+                if (unit == null || qty <= 0) {
+                  showTopSnackBar(
+                    context,
+                    message: "Unit & Quantity required",
+                    backgroundColor: Colors.red.shade700,
+                    icon: Icons.warning_amber_rounded,
+                  );
 
-                      return;
-                    }
+                  return;
+                }
 
-                    context.read<StockBloc>().add(
-                      ApproveItemEvent(
-                        projectId: projects.name.toString(),
-                        barcode: scanController.text,
-                        unit: unit,
-                        qty: qty,
-                      ),
-                    );
-                    FocusScope.of(context).unfocus();
-                  },
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: SubmitButton(
-                  label: 'Delete',
-                  icon: Icons.delete,
-
-                  onPressed: () {
-                    final bloc = context.read<StockBloc>();
-                    final index = bloc.state.selectedIndex;
-
-                    if (index == null) {
-                      showTopSnackBar(
-                        context,
-                        message: "Please select an item to delete",
-                        backgroundColor: Colors.red.shade700,
-                        icon: Icons.delete_outline,
-                      );
-
-                      return;
-                    }
-                    final item = bloc.state.items[index];
-
-                    showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text(
-                          "Delete Item",
-                          style: TextStyle(color: AppColor.secondaryColor),
-                        ),
-                        content: Text(
-                          "Are you sure you want to delete\n${item.itemName} ?",
-                          style: const TextStyle(
-                            color: AppColor.secondaryColor,
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            child: const Text(
-                              "Cancel",
-                              style: TextStyle(color: AppColor.secondaryColor),
-                            ),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          ElevatedButton(
-                            child: const Text(
-                              "Delete",
-                              style: TextStyle(color: AppColor.secondaryColor),
-                            ),
-                            onPressed: () {
-                              bloc.add(DeleteStockEvent(item.id));
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                    FocusScope.of(context).unfocus();
-                  },
-                ),
-              ),
-            ],
+                context.read<StockBloc>().add(
+                  ApproveItemEvent(
+                    projectId: projects.id.toString(),
+                    barcode: scanController.text,
+                    unit: unit,
+                    qty: qty,
+                    projectName: projects.name.toString(),
+                  ),
+                );
+                FocusScope.of(context).unfocus();
+              },
+            ),
           ),
         ],
       ),

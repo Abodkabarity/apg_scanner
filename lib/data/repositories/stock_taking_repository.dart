@@ -91,6 +91,7 @@ class StockRepository {
 
   Future<void> saveNewItem({
     required String projectId,
+    required String projectName,
     required String barcode,
     required ProductModel product,
     required double subQty,
@@ -115,6 +116,7 @@ class StockRepository {
       isSynced: false,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
+      projectName: projectName,
     );
 
     await local.saveOrUpdate(item);
@@ -199,7 +201,8 @@ class StockRepository {
     final payload = modifiedItems.map((e) {
       return {
         "id": e.id,
-        "project_name": projectId,
+        "project_id": e.projectId,
+        "project_name": e.projectName,
         "branch": branchName,
         "item_code": e.itemCode,
         "item_name": e.itemName,
@@ -223,7 +226,7 @@ class StockRepository {
     final response = await supabase
         .from('stock_taking_items')
         .select()
-        .eq('project_name', projectId)
+        .eq('project_id', projectId)
         .eq('branch', branchName!);
     print("EXPORT PROJECT = $projectId");
     print("EXPORT BRANCH = ${session.branch}");
@@ -232,7 +235,10 @@ class StockRepository {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<void> exportExcel({required String projectId}) async {
+  Future<void> exportExcel({
+    required String projectId,
+    required String projectName,
+  }) async {
     final items = await loadItems(projectId);
 
     if (items.isEmpty) {
@@ -248,10 +254,12 @@ class StockRepository {
         'sub_quantity': e.subQuantity,
       };
     }).toList();
-
+    final safeName = projectName
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
+        .trim();
     await ExcelExporter.saveExcelWithSystemPicker(
       data,
-      fileName: 'stock_$projectId.xlsx',
+      fileName: 'stock_$safeName.xlsx',
     );
   }
 

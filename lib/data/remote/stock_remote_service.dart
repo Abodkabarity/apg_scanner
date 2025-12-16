@@ -14,11 +14,11 @@ class StockRemoteService {
     await client.from('stock_taking_items').upsert(body);
   }
 
-  Future<List<StockItemModel>> fetchForProject(int projectId) async {
+  Future<List<StockItemModel>> fetchForProject(String projectId) async {
     final response = await client
         .from('stock_taking_items')
         .select()
-        .eq('project_name', projectId)
+        .eq('project_id', projectId)
         .eq('is_deleted', false);
 
     return (response as List).map((e) => StockItemModel.fromJson(e)).toList();

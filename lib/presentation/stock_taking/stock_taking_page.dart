@@ -68,6 +68,8 @@ class StockTakingPage extends StatelessWidget {
     return result == true;
   }
 
+  final FocusNode qtyFocusNode = FocusNode();
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocListener(
@@ -79,34 +81,32 @@ class StockTakingPage extends StatelessWidget {
               curr.currentProduct != null,
           listener: (context, state) async {
             final bloc = context.read<StockBloc>();
-            final action = await showDialog<DuplicateAction?>(
+
+            bloc.add(MarkProductExistsDialogShownEvent());
+
+            final bool? add = await showDialog<bool>(
               context: context,
               barrierDismissible: false,
               builder: (_) => AlertDialog(
                 title: const Text("Product already scanned"),
                 content: const Text(
-                  "This product already exists.\nWhat do you want to do?",
+                  "This product already exists.\nDo you want to add more quantity?",
                 ),
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context, null),
+                    onPressed: () => Navigator.pop(context, false),
                     child: const Text("Cancel"),
                   ),
-                  TextButton(
-                    onPressed: () =>
-                        Navigator.pop(context, DuplicateAction.add),
-                    child: const Text("Add"),
-                  ),
                   ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pop(context, DuplicateAction.edit),
-                    child: const Text("Edit"),
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text("Add"),
                   ),
                 ],
               ),
             );
 
-            if (action == null) {
+            // Cancel
+            if (add != true) {
               bloc.add(ResetFormEvent());
               scanController.clear();
               nameController.clear();
@@ -114,15 +114,20 @@ class StockTakingPage extends StatelessWidget {
               return;
             }
 
-            bloc.add(SetDuplicateActionEvent(action));
-
-            if (action == DuplicateAction.edit) {
-              qtyController.clear();
-            } else {
-              qtyController.clear();
-            }
+            // Add
+            bloc.add(SetDuplicateActionEvent(DuplicateAction.add));
           },
         ),
+        BlocListener<StockBloc, StockState>(
+          listenWhen: (prev, curr) =>
+              prev.currentProduct == null && curr.currentProduct != null,
+          listener: (context, state) {
+            Future.microtask(() {
+              qtyFocusNode.requestFocus();
+            });
+          },
+        ),
+
         BlocListener<StockBloc, StockState>(
           listenWhen: (prev, curr) => prev.success != curr.success,
           listener: (context, state) {
@@ -161,8 +166,9 @@ class StockTakingPage extends StatelessWidget {
             nameController.text = state.currentProduct!.itemName;
           }
           return GestureDetector(
+            behavior: HitTestBehavior.translucent,
             onTap: () {
-              FocusScope.of(context).unfocus();
+              FocusManager.instance.primaryFocus?.unfocus();
             },
             child: Scaffold(
               appBar: AppBar(
@@ -183,6 +189,7 @@ class StockTakingPage extends StatelessWidget {
                       color: AppColor.secondaryColor,
                     ),
                     onPressed: () async {
+                      FocusManager.instance.primaryFocus?.unfocus();
                       final bloc = context.read<StockBloc>();
                       final confirm = await showDialog<bool>(
                         context: context,
@@ -216,13 +223,15 @@ class StockTakingPage extends StatelessWidget {
 
                       if (confirm == true) {
                         bloc.add(
-                          UploadStockEvent(projectId: projects.name.toString()),
+                          UploadStockEvent(projectId: projects.id.toString()),
                         );
                       }
                     },
                   ),
                   IconButton(
                     onPressed: () {
+                      FocusManager.instance.primaryFocus?.unfocus();
+
                       final branchName = getIt<UserSession>().branch;
 
                       showModalBottomSheet(
@@ -230,8 +239,9 @@ class StockTakingPage extends StatelessWidget {
                         builder: (_) => BlocProvider.value(
                           value: context.read<StockBloc>(),
                           child: ExportBottomSheet(
-                            projectId: projects.name,
+                            projectId: projects.id,
                             branchName: branchName!,
+                            projectName: projects.name,
                           ),
                         ),
                       );
@@ -298,7 +308,9 @@ class StockTakingPage extends StatelessWidget {
                                                 qty > 0) {
                                               bloc.add(
                                                 ApproveItemEvent(
-                                                  projectId: projects.name
+                                                  projectId: projects.id
+                                                      .toString(),
+                                                  projectName: projects.name
                                                       .toString(),
                                                   barcode: scanController.text,
                                                   unit: unit,
@@ -359,7 +371,9 @@ class StockTakingPage extends StatelessWidget {
                                                 qty > 0) {
                                               bloc.add(
                                                 ApproveItemEvent(
-                                                  projectId: projects.name
+                                                  projectId: projects.id
+                                                      .toString(),
+                                                  projectName: projects.name
                                                       .toString(),
                                                   barcode: scanController.text,
                                                   unit: unit,
@@ -386,8 +400,7 @@ class StockTakingPage extends StatelessWidget {
 
                                             bloc.add(
                                               ScanBarcodeEvent(
-                                                projectId: projects.name
-                                                    .toString(),
+                                                projectId: projects.id,
                                                 barcode: barcode,
                                               ),
                                             );
@@ -444,11 +457,13 @@ class StockTakingPage extends StatelessWidget {
                                                 qty > 0) {
                                               bloc.add(
                                                 ApproveItemEvent(
-                                                  projectId: projects.name
+                                                  projectId: projects.id
                                                       .toString(),
                                                   barcode: scanController.text,
                                                   unit: unit,
                                                   qty: qty,
+                                                  projectName: projects.name
+                                                      .toString(),
                                                 ),
                                               );
                                             }
@@ -476,9 +491,13 @@ class StockTakingPage extends StatelessWidget {
                           scanController: scanController,
 
                           projects: projects,
+                          qtyFocusNode: qtyFocusNode,
                         ),
 
-                        ShowItemsList(projectId: projects.name.toString()),
+                        ShowItemsList(
+                          projectId: projects.id.toString(),
+                          projectName: projects.name.toString(),
+                        ),
                       ],
                     ),
                   ),
@@ -505,7 +524,7 @@ class StockTakingPage extends StatelessWidget {
                     ),
                   if (state.isProcessing)
                     Container(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withValues(alpha: 0.4),
                       child: Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,

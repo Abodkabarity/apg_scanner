@@ -338,7 +338,7 @@ class ListProjectWidget extends StatelessWidget {
                 create: (_) => StockBloc(
                   getIt<StockRepository>(),
                   getIt<ProductsRepository>(),
-                )..add(LoadStockEvent(projects.name.toString())),
+                )..add(LoadStockEvent(projects.id.toString())),
                 child: StockTakingPage(projects: projects),
               ),
             ),

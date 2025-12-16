@@ -39,12 +39,15 @@ class ApproveItemEvent extends StockEvent {
   final String barcode;
   final String unit;
   final int qty;
+  final String projectName;
 
   const ApproveItemEvent({
     required this.projectId,
+
     required this.barcode,
     required this.unit,
     required this.qty,
+    required this.projectName,
   });
 }
 
@@ -93,16 +96,19 @@ class UploadStockEvent extends StockEvent {
 
 class ExportExcelEvent extends StockEvent {
   final String projectId;
-  const ExportExcelEvent(this.projectId);
+  final String projectName;
+  const ExportExcelEvent(this.projectId, {required this.projectName});
 }
 
 class SendStockByEmailEvent extends StockEvent {
   final String projectId;
+  final String projectName;
   final String branchName;
 
   const SendStockByEmailEvent({
     required this.projectId,
     required this.branchName,
+    required this.projectName,
   });
 }
 
@@ -114,6 +120,7 @@ class SetDuplicateActionEvent extends StockEvent {
 
 class UpdateMultiUnitEvent extends StockEvent {
   final String projectId;
+  final String projectName;
   final StockItemGroup group;
   final Map<String, int> newUnitQty;
 
@@ -121,6 +128,7 @@ class UpdateMultiUnitEvent extends StockEvent {
     required this.projectId,
     required this.group,
     required this.newUnitQty,
+    required this.projectName,
   });
 }
 

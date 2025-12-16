@@ -51,6 +51,7 @@ class StockExportService {
   /// Send Excel directly via Email
   Future<void> sendExcelByEmail({
     required String projectId,
+    required String projectName,
     required String toEmail,
   }) async {
     final data = await repo.fetchUploadedItems(projectId);
@@ -58,7 +59,9 @@ class StockExportService {
     if (data.isEmpty) {
       throw Exception('No data to send');
     }
-
+    final safeName = projectName
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
+        .trim();
     final bytes = await ExcelExporter.buildExcelBytes(data);
     final fileBase64 = base64Encode(bytes);
 
@@ -66,9 +69,9 @@ class StockExportService {
       'send-stock-email',
       body: {
         'to': toEmail,
-        'subject': 'Stock Taking Report - $projectId',
+        'subject': 'Stock Taking Report - $safeName',
         'text': 'Please find attached stock taking report.',
-        'fileName': 'StockTaking_$projectId.xlsx',
+        'fileName': 'StockTaking_$safeName.xlsx',
         'fileBase64': fileBase64,
       },
     );

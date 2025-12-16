@@ -32,13 +32,14 @@ class StockItemModelAdapter extends TypeAdapter<StockItemModel> {
       isSynced: fields[12] as bool,
       createdAt: fields[13] as DateTime,
       updatedAt: fields[14] as DateTime,
+      projectName: fields[15] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, StockItemModel obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -68,7 +69,9 @@ class StockItemModelAdapter extends TypeAdapter<StockItemModel> {
       ..writeByte(13)
       ..write(obj.createdAt)
       ..writeByte(14)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(15)
+      ..write(obj.projectName);
   }
 
   @override
