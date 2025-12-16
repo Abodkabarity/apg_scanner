@@ -6,18 +6,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/app_color/app_color.dart';
-import '../../../data/model/stock_taking_model.dart';
+import 'multi_unit_dialog.dart';
 
 class ShowItemsList extends StatelessWidget {
-  const ShowItemsList({
-    super.key,
-    required this.onItemSelected,
-    required this.nameController,
-    required this.qtyController,
-  });
-  final Function(StockItemModel) onItemSelected;
-  final TextEditingController nameController;
-  final TextEditingController qtyController;
+  const ShowItemsList({super.key, required this.projectId});
+
+  final String projectId;
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<StockBloc, StockState>(
@@ -45,25 +40,20 @@ class ShowItemsList extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 10.h),
-
               SizedBox(
                 height: 350.h,
                 child: ListView.builder(
-                  itemCount: state.filteredItems.length,
+                  itemCount: state.filteredGroupedItems.length,
                   itemBuilder: (context, i) {
-                    final items = state.filteredItems[i];
+                    final group = state.filteredGroupedItems[i];
+
                     return Card(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
-                        side: BorderSide(
-                          color: state.selectedIndex == i
-                              ? AppColor.secondaryColor
-                              : Colors.white,
-                        ),
                       ),
                       child: ListTile(
                         title: Text(
-                          items.itemName,
+                          group.itemName,
                           style: TextStyle(
                             color: AppColor.secondaryColor,
                             fontWeight: FontWeight.bold,
@@ -71,14 +61,16 @@ class ShowItemsList extends StatelessWidget {
                           ),
                         ),
                         leading: Text(
-                          items.unit,
+                          "Box",
                           style: TextStyle(
                             color: AppColor.secondaryColor,
                             fontWeight: FontWeight.bold,
+                            fontSize: 13.sp,
                           ),
                         ),
                         trailing: Text(
-                          "Qty ${items.quantity}",
+                          "Qty ${group.totalSubQty.toStringAsFixed(2)}",
+
                           style: TextStyle(
                             color: AppColor.secondaryColor,
                             fontWeight: FontWeight.bold,
@@ -86,57 +78,82 @@ class ShowItemsList extends StatelessWidget {
                           ),
                         ),
                         onTap: () {
+                          if (!group.isMultiUnit) {
+                            showDialog(
+                              context: context,
+                              builder: (dialogContext) => AlertDialog(
+                                title: const Text(
+                                  "Edit Item",
+                                  style: TextStyle(
+                                    color: AppColor.secondaryColor,
+                                  ),
+                                ),
+                                content: const Text(
+                                  "Do you want to edit this item?",
+                                  style: TextStyle(
+                                    color: AppColor.secondaryColor,
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(dialogContext),
+                                    child: const Text(
+                                      "No",
+                                      style: TextStyle(
+                                        color: AppColor.secondaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      final unit = group.unitQty.keys.first;
+                                      final qty = group.unitQty[unit] ?? 0;
+                                      final rowId = group.unitId[unit]!;
+
+                                      context.read<StockBloc>().add(
+                                        EditSingleUnitFromListEvent(
+                                          group: group,
+                                          rowId: rowId,
+                                          unit: unit,
+                                          qty: qty,
+                                        ),
+                                      );
+
+                                      Navigator.pop(dialogContext);
+                                    },
+                                    child: const Text(
+                                      "Yes",
+                                      style: TextStyle(
+                                        color: AppColor.secondaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            return;
+                          }
+                          final bloc = context.read<StockBloc>();
+
+                          final product = bloc.productsRepo.products.firstWhere(
+                            (p) => p.itemCode == group.itemCode,
+                          );
                           showDialog(
                             context: context,
-                            builder: (dialogContext) => AlertDialog(
-                              title: const Text(
-                                "Edit Item",
-                                style: TextStyle(
-                                  color: AppColor.secondaryColor,
-                                ),
-                              ),
-                              content: const Text(
-                                "Do you want to edit it?",
-                                style: TextStyle(
-                                  color: AppColor.secondaryColor,
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  child: const Text(
-                                    "No",
-                                    style: TextStyle(
-                                      color: AppColor.secondaryColor,
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    context.read<StockBloc>().add(
-                                      ResetFormEvent(),
-                                    );
-                                    nameController.clear();
-                                    qtyController.clear();
-                                    FocusScope.of(context).unfocus();
-                                    Navigator.pop(dialogContext);
-                                  },
-                                ),
-                                ElevatedButton(
-                                  child: const Text(
-                                    "Yes",
-                                    style: TextStyle(
-                                      color: AppColor.secondaryColor,
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    context.read<StockBloc>().add(
-                                      ChangeSelectedIndexEvent(i),
-                                    );
-                                    onItemSelected(items);
-                                    FocusScope.of(context).unfocus();
+                            builder: (_) => MultiUnitEditDialog(
+                              group: group,
+                              onApply: (newUnitQty) {
+                                context.read<StockBloc>().add(
+                                  UpdateMultiUnitEvent(
+                                    projectId: projectId,
 
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ],
+                                    group: group,
+                                    newUnitQty: newUnitQty,
+                                  ),
+                                );
+                              },
+                              numberSubUnit: product.numberSubUnit,
                             ),
                           );
                         },

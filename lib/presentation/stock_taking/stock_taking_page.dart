@@ -79,58 +79,48 @@ class StockTakingPage extends StatelessWidget {
               curr.currentProduct != null,
           listener: (context, state) async {
             final bloc = context.read<StockBloc>();
-            bloc.add(const MarkProductExistsDialogShownEvent());
-
-            final result = await showDialog<bool>(
+            final action = await showDialog<DuplicateAction?>(
               context: context,
               barrierDismissible: false,
               builder: (_) => AlertDialog(
                 title: const Text("Product already scanned"),
                 content: const Text(
-                  "This product is already saved.\nDo you want to edit it?",
+                  "This product already exists.\nWhat do you want to do?",
                 ),
                 actions: [
                   TextButton(
-                    onPressed: () {
-                      Navigator.pop(context, false);
-                      nameController.clear();
-                      scanController.clear();
-                      FocusScope.of(context).unfocus();
-                    },
-                    child: const Text(
-                      "No",
-                      style: TextStyle(color: AppColor.secondaryColor),
-                    ),
+                    onPressed: () => Navigator.pop(context, null),
+                    child: const Text("Cancel"),
+                  ),
+                  TextButton(
+                    onPressed: () =>
+                        Navigator.pop(context, DuplicateAction.add),
+                    child: const Text("Add"),
                   ),
                   ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context, true);
-                      FocusScope.of(context).unfocus();
-                    },
-                    child: const Text(
-                      "Yes",
-                      style: TextStyle(color: AppColor.secondaryColor),
-                    ),
+                    onPressed: () =>
+                        Navigator.pop(context, DuplicateAction.edit),
+                    child: const Text("Edit"),
                   ),
                 ],
               ),
             );
 
-            if (result == true) {
-              final existing = state.items.firstWhere(
-                (e) => e.itemCode == state.currentProduct!.itemCode,
-              );
-              qtyController.text = existing.quantity.toString();
-
-              bloc.add(ChangeSelectedIndexEvent(state.items.indexOf(existing)));
-              scanController.clear();
-            } else {
+            if (action == null) {
               bloc.add(ResetFormEvent());
+              scanController.clear();
+              nameController.clear();
+              qtyController.clear();
+              return;
             }
 
-            /*
-            bloc.add(const ClearProductAlreadyExistsFlagEvent());
-*/
+            bloc.add(SetDuplicateActionEvent(action));
+
+            if (action == DuplicateAction.edit) {
+              qtyController.clear();
+            } else {
+              qtyController.clear();
+            }
           },
         ),
         BlocListener<StockBloc, StockState>(
@@ -488,18 +478,7 @@ class StockTakingPage extends StatelessWidget {
                           projects: projects,
                         ),
 
-                        ShowItemsList(
-                          onItemSelected: (item) {
-                            context.read<StockBloc>().add(
-                              ScannedItemSelectedEvent(item),
-                            );
-
-                            qtyController.text = item.quantity.toString();
-                            FocusScope.of(context).unfocus();
-                          },
-                          nameController: nameController,
-                          qtyController: qtyController,
-                        ),
+                        ShowItemsList(projectId: projects.name.toString()),
                       ],
                     ),
                   ),

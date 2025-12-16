@@ -31,7 +31,7 @@ class StockRepository {
     }
   }
 
-  Future<void> saveNewItem({
+  /*Future<void> saveNewItem({
     required String projectId,
     required String barcode,
     required ProductModel product,
@@ -61,9 +61,66 @@ class StockRepository {
     );
 
     await local.saveOrUpdate(item);
+  }*/
+  Future<void> updateItem({
+    required StockItemModel item,
+    required double subQty,
+  }) async {
+    final updated = item.copyWith(
+      subQuantity: subQty,
+      updatedAt: DateTime.now(),
+      isSynced: false,
+    );
+
+    await local.saveOrUpdate(updated);
   }
 
-  Future<void> updateItem({
+  Future<void> updateItemFull({
+    required StockItemModel item,
+    required String unit,
+    required double subQty,
+  }) async {
+    final updated = item.copyWith(
+      unit: unit,
+      subQuantity: subQty,
+      isSynced: false,
+      updatedAt: DateTime.now(),
+    );
+    await local.saveOrUpdate(updated);
+  }
+
+  Future<void> saveNewItem({
+    required String projectId,
+    required String barcode,
+    required ProductModel product,
+    required double subQty,
+    required String unit,
+  }) async {
+    final item = StockItemModel(
+      id: const Uuid().v4(),
+      projectId: projectId,
+      branchName: session.branch!,
+      barcode: barcode,
+      itemId: product.id,
+      itemCode: product.itemCode,
+      itemName: product.itemName,
+
+      unit: unit,
+      subUnit: product.subUnit,
+
+      quantity: 0,
+      subQuantity: subQty,
+
+      isDeleted: false,
+      isSynced: false,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    await local.saveOrUpdate(item);
+  }
+
+  /* Future<void> updateItem({
     required StockItemModel item,
     required int qty,
     required String unit,
@@ -81,7 +138,7 @@ class StockRepository {
     );
 
     await local.saveOrUpdate(updated);
-  }
+  }*/
 
   Future<void> delete(String id) async {
     await local.deleteSoft(id);
@@ -188,7 +245,7 @@ class StockRepository {
         'item_code': e.itemCode,
         'item_name': e.itemName,
         'unit_type': e.unit,
-        'quantity': e.quantity,
+        'sub_quantity': e.subQuantity,
       };
     }).toList();
 
@@ -196,5 +253,24 @@ class StockRepository {
       data,
       fileName: 'stock_$projectId.xlsx',
     );
+  }
+
+  Future<StockItemModel?> findExistingItemByUnit(
+    String projectId,
+    String itemCode,
+    String unit,
+  ) async {
+    final items = await loadItems(projectId);
+
+    try {
+      return items.firstWhere(
+        (e) =>
+            e.itemCode == itemCode &&
+            e.unit.toLowerCase() == unit.toLowerCase() &&
+            !e.isDeleted,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 }

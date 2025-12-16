@@ -1,7 +1,10 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../data/model/products_model.dart';
+import '../../../data/model/stock_item_group.dart';
 import '../../../data/model/stock_taking_model.dart';
+
+enum DuplicateAction { add, edit }
 
 class StockState extends Equatable {
   final bool loading;
@@ -11,6 +14,8 @@ class StockState extends Equatable {
   final String? selectedUnit;
   final String? error;
   final String? success;
+  final String? editingRowId;
+
   final List<StockItemModel> filteredItems;
   final int? selectedIndex;
   final bool productAlreadyExists;
@@ -19,6 +24,10 @@ class StockState extends Equatable {
   final String? uploadMessage;
   final bool isProcessing;
   final String? processingMessage;
+  final DuplicateAction duplicateAction;
+  final double subUnit;
+  final List<StockItemGroup> groupedItems;
+  final List<StockItemGroup> filteredGroupedItems;
 
   /// suggestions for search (auto-complete)
   final List<ProductModel> suggestions;
@@ -36,10 +45,15 @@ class StockState extends Equatable {
     this.suggestions = const [],
     this.filteredItems = const [],
     this.selectedIndex,
+    this.groupedItems = const [],
+    this.filteredGroupedItems = const [],
     this.productAlreadyExists = false,
     this.productExistsDialogShown = false,
     this.isUploading = false,
     this.uploadMessage,
+    this.duplicateAction = DuplicateAction.edit,
+    this.subUnit = 1,
+    this.editingRowId,
   });
 
   StockState copyWith({
@@ -59,7 +73,13 @@ class StockState extends Equatable {
     String? error,
     bool? productAlreadyExists,
     String? success,
+    DuplicateAction? duplicateAction,
+    double? subUnit,
+    String? editingRowId,
+    bool clearEditingRowId = false,
 
+    List<StockItemGroup>? groupedItems,
+    List<StockItemGroup>? filteredGroupedItems,
     List<StockItemModel>? filteredItems,
     int? selectedIndex,
     bool? productExistsDialogShown,
@@ -91,7 +111,15 @@ class StockState extends Equatable {
       isUploading: isUploading ?? this.isUploading,
       uploadMessage: uploadMessage ?? this.uploadMessage,
       success: success,
+      duplicateAction: duplicateAction ?? this.duplicateAction,
+      subUnit: subUnit ?? this.subUnit,
+      groupedItems: groupedItems ?? this.groupedItems,
+      filteredGroupedItems: filteredGroupedItems ?? this.filteredGroupedItems,
       suggestions: suggestions ?? this.suggestions,
+      editingRowId: clearEditingRowId
+          ? null
+          : (editingRowId ?? this.editingRowId),
+
       productExistsDialogShown:
           productExistsDialogShown ?? this.productExistsDialogShown,
     );
@@ -114,5 +142,10 @@ class StockState extends Equatable {
     productAlreadyExists,
     isProcessing,
     processingMessage,
+    duplicateAction,
+    subUnit,
+    groupedItems,
+    filteredGroupedItems,
+    editingRowId,
   ];
 }

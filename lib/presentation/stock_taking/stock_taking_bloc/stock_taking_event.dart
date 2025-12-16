@@ -1,6 +1,8 @@
 import 'package:apg_scanner/data/model/stock_taking_model.dart';
+import 'package:apg_scanner/presentation/stock_taking/stock_taking_bloc/stock_taking_state.dart';
 
 import '../../../data/model/products_model.dart';
+import '../../../data/model/stock_item_group.dart';
 
 abstract class StockEvent {
   const StockEvent();
@@ -101,5 +103,40 @@ class SendStockByEmailEvent extends StockEvent {
   const SendStockByEmailEvent({
     required this.projectId,
     required this.branchName,
+  });
+}
+
+class SetDuplicateActionEvent extends StockEvent {
+  final DuplicateAction action;
+
+  SetDuplicateActionEvent(this.action);
+}
+
+class UpdateMultiUnitEvent extends StockEvent {
+  final String projectId;
+  final StockItemGroup group;
+  final Map<String, int> newUnitQty;
+
+  UpdateMultiUnitEvent({
+    required this.projectId,
+    required this.group,
+    required this.newUnitQty,
+  });
+}
+
+class EditSingleUnitFromListEvent extends StockEvent {
+  final StockItemGroup group;
+
+  final String rowId;
+
+  final String unit;
+
+  final int qty;
+
+  EditSingleUnitFromListEvent({
+    required this.group,
+    required this.rowId,
+    required this.unit,
+    required this.qty,
   });
 }
