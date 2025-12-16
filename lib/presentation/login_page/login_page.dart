@@ -67,16 +67,12 @@ class LoginPage extends StatelessWidget {
                         error: state.error,
                         isObscure: state.isObscure,
                         onPressed: () {
-                          /*
                           if (_formKey.currentState?.validate() != true) return;
-*/
 
                           context.read<LoginBloc>().add(
                             LoginSubmitted(
-                              "a.alkabariti@Alain-pharmacy.com",
-                              "Abod@1234",
-                              /* emailController.text.trim(),
-                              passwordController.text.trim(),*/
+                              emailController.text.trim(),
+                              passwordController.text.trim(),
                             ),
                           );
                         },
