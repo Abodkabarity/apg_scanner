@@ -18,11 +18,9 @@ class StockLocalService {
 
   Future<List<StockItemModel>> loadItems(String projectId) async {
     final box = await _openBox();
+
     return box.values
-        .where(
-          (e) =>
-              e is StockItemModel && e.projectId == projectId && !e.isDeleted,
-        )
+        .where((e) => e is StockItemModel && e.projectId == projectId)
         .cast<StockItemModel>()
         .toList();
   }
@@ -34,16 +32,24 @@ class StockLocalService {
 
   Future<void> deleteSoft(String id) async {
     final box = await _openBox();
-    final item = box.get(id);
 
-    if (item != null && item is StockItemModel) {
-      final newItem = item.copyWith(
-        isDeleted: true,
-        isSynced: false,
-        updatedAt: DateTime.now(),
-      );
-      await box.put(id, newItem);
+    for (final key in box.keys) {
+      final item = box.get(key);
+
+      if (item is StockItemModel && item.id == id) {
+        await box.put(
+          key,
+          item.copyWith(
+            isDeleted: true,
+            isSynced: false,
+            updatedAt: DateTime.now(),
+          ),
+        );
+        return;
+      }
     }
+
+    throw Exception("Item not found for soft delete: $id");
   }
 
   Future<List<StockItemModel>> getDirty(String projectId) async {

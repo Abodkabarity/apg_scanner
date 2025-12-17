@@ -228,25 +228,49 @@ class StockTakingPage extends StatelessWidget {
                       }
                     },
                   ),
-                  IconButton(
-                    onPressed: () {
-                      FocusManager.instance.primaryFocus?.unfocus();
+                  BlocBuilder<StockBloc, StockState>(
+                    builder: (context, state) {
+                      final disabled = state.hasUnsyncedItems;
 
-                      final branchName = getIt<UserSession>().branch;
-
-                      showModalBottomSheet(
-                        context: context,
-                        builder: (_) => BlocProvider.value(
-                          value: context.read<StockBloc>(),
-                          child: ExportBottomSheet(
-                            projectId: projects.id,
-                            branchName: branchName!,
-                            projectName: projects.name,
-                          ),
+                      return IconButton(
+                        tooltip: disabled
+                            ? "Upload data first"
+                            : "Export report",
+                        icon: Icon(
+                          Icons.download,
+                          color: disabled
+                              ? Colors.grey.shade700
+                              : AppColor.secondaryColor,
                         ),
+                        onPressed: disabled
+                            ? () {
+                                showTopSnackBar(
+                                  context,
+                                  message:
+                                      "Please upload data before exporting",
+                                  backgroundColor: Colors.orange,
+                                  icon: Icons.cloud_upload,
+                                );
+                              }
+                            : () {
+                                FocusManager.instance.primaryFocus?.unfocus();
+
+                                final branchName = getIt<UserSession>().branch;
+
+                                showModalBottomSheet(
+                                  context: context,
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<StockBloc>(),
+                                    child: ExportBottomSheet(
+                                      projectId: projects.id,
+                                      branchName: branchName!,
+                                      projectName: projects.name,
+                                    ),
+                                  ),
+                                );
+                              },
                       );
                     },
-                    icon: Icon(Icons.download, color: AppColor.secondaryColor),
                   ),
                 ],
               ),

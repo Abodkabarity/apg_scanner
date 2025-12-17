@@ -9,6 +9,7 @@ class MultiUnitEditDialog extends StatefulWidget {
   final List<String> allUnits;
   final int numberSubUnit;
   final void Function(Map<String, int>) onApply;
+  final VoidCallback onDelete;
 
   const MultiUnitEditDialog({
     super.key,
@@ -16,6 +17,7 @@ class MultiUnitEditDialog extends StatefulWidget {
     required this.allUnits,
     required this.numberSubUnit,
     required this.onApply,
+    required this.onDelete,
   });
 
   @override
@@ -176,7 +178,7 @@ class _MultiUnitEditDialogState extends State<MultiUnitEditDialog> {
                       style: TextStyle(color: AppColor.secondaryColor),
                     ),
                     onPressed: () {
-                      widget.onApply(const {});
+                      widget.onDelete();
                       Navigator.pop(context);
                       Navigator.pop(context);
                     },

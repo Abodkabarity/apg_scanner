@@ -20,8 +20,10 @@ class ScanBarcodeEvent extends StockEvent {
 }
 
 class DeleteStockEvent extends StockEvent {
-  final String id;
-  const DeleteStockEvent(this.id);
+  final List<String> ids;
+  final String projectId;
+
+  const DeleteStockEvent({required this.ids, required this.projectId});
 }
 
 class SyncStockEvent extends StockEvent {

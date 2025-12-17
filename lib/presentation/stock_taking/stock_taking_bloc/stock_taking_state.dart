@@ -41,6 +41,7 @@ class StockState extends Equatable {
     this.units = const [],
     this.selectedUnit,
     this.error,
+
     this.success,
     this.suggestions = const [],
     this.filteredItems = const [],
@@ -55,6 +56,7 @@ class StockState extends Equatable {
     this.subUnit = 1,
     this.editingRowId,
   });
+  bool get hasUnsyncedItems => items.any((e) => !e.isSynced || e.isDeleted);
 
   StockState copyWith({
     bool? loading,

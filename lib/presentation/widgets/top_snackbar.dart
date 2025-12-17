@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 void showTopSnackBar(
   BuildContext context, {
@@ -11,9 +12,10 @@ void showTopSnackBar(
 
   final entry = OverlayEntry(
     builder: (context) => Positioned(
-      top: MediaQuery.of(context).padding.top + 12,
-      left: 16,
-      right: 16,
+      //top: MediaQuery.of(context).padding.top + 12.h,
+      left: 16.w,
+      right: 16.w,
+      bottom: MediaQuery.of(context).padding.top + 30.h,
       child: Material(
         color: Colors.transparent,
         child: _TopSnackBar(

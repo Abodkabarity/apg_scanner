@@ -186,36 +186,43 @@ class StockRepository {
     required String projectId,
     required List<StockItemModel> items,
   }) async {
-    final branchName = session.branch; // من UserSession
-
+    final branchName = session.branch;
     if (branchName == null) {
       throw Exception("Branch not found in session");
     }
 
-    final modifiedItems = items.where((item) => !item.isSynced).toList();
+    final modifiedItems = items.where((item) {
+      return !item.isSynced || item.isDeleted;
+    }).toList();
 
     if (modifiedItems.isEmpty) {
       throw Exception("No modified items to upload");
     }
 
-    final payload = modifiedItems.map((e) {
-      return {
-        "id": e.id,
-        "project_id": e.projectId,
-        "project_name": e.projectName,
-        "branch": branchName,
-        "item_code": e.itemCode,
-        "item_name": e.itemName,
-        "barcode": e.barcode,
-        "unit_type": e.unit,
-        "quantity": e.quantity,
-        "sub_quantity": e.subQuantity,
-        "created_at": e.createdAt.toIso8601String(),
-        "updated_at": DateTime.now().toIso8601String(),
-      };
-    }).toList();
+    final payload = modifiedItems
+        .map(
+          (e) => {
+            "id": e.id,
+            "project_id": e.projectId,
+            "project_name": e.projectName,
+            "branch": branchName,
+            "item_code": e.itemCode,
+            "item_name": e.itemName,
+            "barcode": e.barcode,
+            "unit_type": e.unit,
+            "quantity": e.quantity,
+            "sub_quantity": e.subQuantity,
+            "is_deleted": e.isDeleted,
+            "updated_at": DateTime.now().toIso8601String(),
+          },
+        )
+        .toList();
 
     await supabase.from("stock_taking_items").upsert(payload, onConflict: 'id');
+
+    for (final item in modifiedItems) {
+      await local.saveOrUpdate(item.copyWith(isSynced: true));
+    }
   }
 
   Future<List<Map<String, dynamic>>> fetchUploadedItems(
@@ -227,7 +234,9 @@ class StockRepository {
         .from('stock_taking_items')
         .select()
         .eq('project_id', projectId)
-        .eq('branch', branchName!);
+        .eq('branch', branchName!)
+        .eq('is_deleted', false);
+
     print("EXPORT PROJECT = $projectId");
     print("EXPORT BRANCH = ${session.branch}");
     print("ROWS = ${response.length}");
@@ -239,7 +248,9 @@ class StockRepository {
     required String projectId,
     required String projectName,
   }) async {
-    final items = await loadItems(projectId);
+    final items = (await loadItems(
+      projectId,
+    )).where((e) => !e.isDeleted).toList();
 
     if (items.isEmpty) {
       throw Exception("No items to export");

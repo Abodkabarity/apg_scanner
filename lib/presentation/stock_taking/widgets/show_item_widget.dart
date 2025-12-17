@@ -13,8 +13,9 @@ class ShowItemsList extends StatelessWidget {
     super.key,
     required this.projectId,
     required this.projectName,
+    this.id,
   });
-
+  final String? id;
   final String projectId;
   final String projectName;
 
@@ -143,6 +144,14 @@ class ShowItemsList extends StatelessWidget {
                                     group: group,
                                     newUnitQty: newUnitQty,
                                     projectName: projectName,
+                                  ),
+                                );
+                              },
+                              onDelete: () {
+                                bloc.add(
+                                  DeleteStockEvent(
+                                    projectId: projectId,
+                                    ids: group.unitId.values.toList(),
                                   ),
                                 );
                               },

@@ -79,15 +79,20 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     emit(state.copyWith(loading: true));
 
     await productsRepo.ensureLoaded();
-    final items = await repo.loadItems(event.projectId);
 
-    final groups = _groupItemsByItemCode(items);
+    final allItems = await repo.loadItems(event.projectId);
+
+    final visibleItems = allItems.where((e) => !e.isDeleted).toList();
+
+    final groups = _groupItemsByItemCode(visibleItems);
 
     emit(
       state.copyWith(
         loading: false,
-        items: items,
-        filteredItems: items,
+
+        items: allItems,
+
+        filteredItems: visibleItems,
         groupedItems: groups,
         filteredGroupedItems: groups,
       ),
@@ -335,21 +340,25 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     );
   }
 */
-
   Future<void> _onDelete(
     DeleteStockEvent event,
     Emitter<StockState> emit,
   ) async {
-    await repo.delete(event.id);
+    for (final id in event.ids) {
+      await repo.delete(id); // isDeleted=true + isSynced=false
+    }
+    await repo.debugPrintAll(event.projectId);
 
-    final updatedItems = state.items.where((e) => e.id != event.id).toList();
+    final items = await repo.loadItems(event.projectId);
 
-    final groups = _groupItemsByItemCode(updatedItems);
+    final visibleItems = items.where((e) => !e.isDeleted).toList();
+
+    final groups = _groupItemsByItemCode(visibleItems);
 
     emit(
       state.copyWith(
-        items: updatedItems,
-        filteredItems: updatedItems,
+        items: items,
+        filteredItems: visibleItems,
         groupedItems: groups,
         filteredGroupedItems: groups,
 
@@ -534,7 +543,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     );
 
     try {
-      final items = state.items;
+      final items = await repo.loadItems(event.projectId);
 
       if (items.isEmpty) {
         emit(
@@ -548,10 +557,11 @@ class StockBloc extends Bloc<StockEvent, StockState> {
       }
 
       await repo.uploadStockItems(projectId: event.projectId, items: items);
-
+      final updateItems = await repo.loadItems(event.projectId);
       emit(
         state.copyWith(
           isUploading: false,
+          items: updateItems,
           success: "Data Uploaded Successfully",
           uploadMessage: null,
         ),
