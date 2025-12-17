@@ -2,6 +2,7 @@ class StockItemGroup {
   final String itemCode;
   final String itemName;
   final String barcode;
+  final DateTime latestCreatedAt;
 
   final double totalSubQty;
   final int totalDisplayQty;
@@ -17,6 +18,7 @@ class StockItemGroup {
     required this.totalDisplayQty,
     required this.unitQty,
     required this.unitId,
+    required this.latestCreatedAt,
   });
 
   bool get isMultiUnit => unitQty.length > 1;

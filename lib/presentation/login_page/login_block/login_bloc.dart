@@ -5,6 +5,7 @@ import '../../../core/di/injection.dart';
 import '../../../core/session/user_session.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/project_repository.dart';
+import '../../../data/services/connectivity_service.dart';
 import '../../../data/services/products_sync_service.dart';
 import 'login_event.dart';
 import 'login_state.dart';
@@ -35,7 +36,19 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         clearError: true,
       ),
     );
+    final hasNet = await getIt<ConnectivityService>().hasInternet();
 
+    if (!hasNet) {
+      emit(
+        state.copyWith(
+          status: LoginStatus.failure,
+          error: "No internet connection. Please check your network.",
+          message: null,
+          clearMessage: true,
+        ),
+      );
+      return;
+    }
     try {
       await authRepository.login(event.email, event.password);
 

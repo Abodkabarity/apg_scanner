@@ -56,7 +56,7 @@ class StockState extends Equatable {
     this.subUnit = 1,
     this.editingRowId,
   });
-  bool get hasUnsyncedItems => items.any((e) => !e.isSynced || e.isDeleted);
+  bool get hasUnsyncedItems => items.any((e) => !e.isSynced);
 
   StockState copyWith({
     bool? loading,

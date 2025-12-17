@@ -6,6 +6,7 @@ import '../../../data/model/stock_taking_model.dart';
 import '../../../data/repositories/branch_repository.dart';
 import '../../../data/repositories/products_repository.dart';
 import '../../../data/repositories/stock_taking_repository.dart';
+import '../../../data/services/connectivity_service.dart';
 import '../../../data/services/stock_export_service.dart';
 import 'stock_taking_event.dart';
 import 'stock_taking_state.dart';
@@ -81,7 +82,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     await productsRepo.ensureLoaded();
 
     final allItems = await repo.loadItems(event.projectId);
-
+    allItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final visibleItems = allItems.where((e) => !e.isDeleted).toList();
 
     final groups = _groupItemsByItemCode(visibleItems);
@@ -114,9 +115,13 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     StockItemModel? existingItem;
 
     try {
-      existingItem = state.items.firstWhere(
-        (e) => e.itemCode == product.itemCode,
-      );
+      existingItem = state.items
+          .where((e) => !e.isDeleted)
+          .cast<StockItemModel?>()
+          .firstWhere(
+            (e) => e?.itemCode == product.itemCode,
+            orElse: () => null,
+          );
     } catch (_) {
       existingItem = null;
     }
@@ -448,9 +453,13 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     StockItemModel? existingItem;
 
     try {
-      existingItem = state.items.firstWhere(
-        (e) => e.itemCode == product.itemCode,
-      );
+      existingItem = state.items
+          .where((e) => !e.isDeleted)
+          .cast<StockItemModel?>()
+          .firstWhere(
+            (e) => e?.itemCode == product.itemCode,
+            orElse: () => null,
+          );
     } catch (_) {
       existingItem = null;
     }
@@ -541,11 +550,22 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         success: null,
       ),
     );
+    final hasNet = await getIt<ConnectivityService>().hasInternet();
+
+    if (!hasNet) {
+      emit(
+        state.copyWith(
+          isUploading: false,
+          error: "No internet connection. Data saved locally.",
+        ),
+      );
+      return;
+    }
 
     try {
-      final items = await repo.loadItems(event.projectId);
+      final allItems = await repo.loadItems(event.projectId);
 
-      if (items.isEmpty) {
+      if (allItems.isEmpty) {
         emit(
           state.copyWith(
             isUploading: false,
@@ -556,12 +576,24 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         return;
       }
 
-      await repo.uploadStockItems(projectId: event.projectId, items: items);
-      final updateItems = await repo.loadItems(event.projectId);
+      await repo.uploadStockItems(
+        projectId: event.projectId,
+        items: allItems, // ✅
+      );
+
+      final refreshed = await repo.loadItems(event.projectId);
+
       emit(
         state.copyWith(
           isUploading: false,
-          items: updateItems,
+          items: refreshed,
+          filteredItems: refreshed.where((e) => !e.isDeleted).toList(),
+          groupedItems: _groupItemsByItemCode(
+            refreshed.where((e) => !e.isDeleted).toList(),
+          ),
+          filteredGroupedItems: _groupItemsByItemCode(
+            refreshed.where((e) => !e.isDeleted).toList(),
+          ),
           success: "Data Uploaded Successfully",
           uploadMessage: null,
         ),
@@ -581,6 +613,11 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     ExportExcelEvent event,
     Emitter<StockState> emit,
   ) async {
+    if (state.hasUnsyncedItems) {
+      emit(state.copyWith(error: "Please upload data before exporting"));
+      return;
+    }
+
     emit(
       state.copyWith(
         isProcessing: true,
@@ -676,9 +713,11 @@ class StockBloc extends Bloc<StockEvent, StockState> {
   }
 
   List<StockItemGroup> _groupItemsByItemCode(List<StockItemModel> items) {
+    final visibleItems = items.where((e) => !e.isDeleted).toList();
+
     final Map<String, List<StockItemModel>> map = {};
 
-    for (final it in items) {
+    for (final it in visibleItems) {
       map.putIfAbsent(it.itemCode, () => []);
       map[it.itemCode]!.add(it);
     }
@@ -711,17 +750,20 @@ class StockBloc extends Bloc<StockEvent, StockState> {
       }
 
       double totalSubQty = 0;
+      DateTime latestCreatedAt = rows.first.createdAt;
 
       final unitQty = <String, int>{};
       final unitId = <String, String>{};
 
       for (final r in rows) {
         final subQty = r.subQuantity.toDouble();
-
         totalSubQty += subQty;
 
-        final qty = qtyFromSub(r.unit, subQty);
+        if (r.createdAt.isAfter(latestCreatedAt)) {
+          latestCreatedAt = r.createdAt;
+        }
 
+        final qty = qtyFromSub(r.unit, subQty);
         unitQty[r.unit] = qty;
         unitId[r.unit] = r.id;
       }
@@ -734,11 +776,13 @@ class StockBloc extends Bloc<StockEvent, StockState> {
           totalSubQty: totalSubQty,
           unitQty: unitQty,
           totalDisplayQty: totalSubQty.round(),
-
           unitId: unitId,
+          latestCreatedAt: latestCreatedAt,
         ),
       );
     }
+
+    groups.sort((a, b) => b.latestCreatedAt.compareTo(a.latestCreatedAt));
 
     return groups;
   }

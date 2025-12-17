@@ -8,6 +8,7 @@ import '../../data/repositories/branch_repository.dart';
 import '../../data/repositories/products_repository.dart';
 import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
+import '../../data/services/connectivity_service.dart';
 import '../../data/services/local_storage_service.dart';
 import '../../data/services/products_local_service.dart';
 import '../../data/services/products_sync_service.dart';
@@ -64,7 +65,7 @@ void setupGetIt() {
       getIt<UserSession>(),
     ),
   );
-
+  getIt.registerLazySingleton<ConnectivityService>(() => ConnectivityService());
   getIt.registerFactory<StockBloc>(
     () => StockBloc(getIt<StockRepository>(), getIt<ProductsRepository>()),
   );

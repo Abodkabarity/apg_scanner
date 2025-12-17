@@ -183,51 +183,67 @@ class StockTakingPage extends StatelessWidget {
                 centerTitle: true,
                 backgroundColor: AppColor.primaryColor,
                 actions: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.cloud_upload,
-                      color: AppColor.secondaryColor,
-                    ),
-                    onPressed: () async {
-                      FocusManager.instance.primaryFocus?.unfocus();
-                      final bloc = context.read<StockBloc>();
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: const Text("Confirm Upload"),
-                          content: const Text(
-                            "Do you want to save and upload all scanned items?",
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text(
-                                "Cancel",
-                                style: TextStyle(
-                                  color: AppColor.secondaryColor,
-                                ),
-                              ),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text(
-                                "Yes",
-                                style: TextStyle(
-                                  color: AppColor.secondaryColor,
-                                ),
-                              ),
-                            ),
-                          ],
+                  BlocBuilder<StockBloc, StockState>(
+                    buildWhen: (prev, curr) =>
+                        prev.hasUnsyncedItems != curr.hasUnsyncedItems,
+                    builder: (context, state) {
+                      return IconButton(
+                        icon: Icon(
+                          Icons.cloud_upload,
+                          color: state.hasUnsyncedItems
+                              ? Colors.red.shade700
+                              : AppColor.secondaryColor,
                         ),
-                      );
+                        tooltip: state.hasUnsyncedItems
+                            ? "Unsynced changes"
+                            : "All data uploaded",
+                        onPressed: () async {
+                          FocusManager.instance.primaryFocus?.unfocus();
+                          final bloc = context.read<StockBloc>();
 
-                      if (confirm == true) {
-                        bloc.add(
-                          UploadStockEvent(projectId: projects.id.toString()),
-                        );
-                      }
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: const Text("Confirm Upload"),
+                              content: const Text(
+                                "Do you want to save and upload all scanned items?",
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: const Text(
+                                    "Cancel",
+                                    style: TextStyle(
+                                      color: AppColor.secondaryColor,
+                                    ),
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: const Text(
+                                    "Yes",
+                                    style: TextStyle(
+                                      color: AppColor.secondaryColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true) {
+                            bloc.add(
+                              UploadStockEvent(
+                                projectId: projects.id.toString(),
+                              ),
+                            );
+                          }
+                        },
+                      );
                     },
                   ),
+
                   BlocBuilder<StockBloc, StockState>(
                     builder: (context, state) {
                       final disabled = state.hasUnsyncedItems;
