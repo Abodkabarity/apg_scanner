@@ -116,8 +116,9 @@ class SendStockByEmailEvent extends StockEvent {
 
 class SetDuplicateActionEvent extends StockEvent {
   final DuplicateAction action;
+  final bool forceDefaultBox;
 
-  SetDuplicateActionEvent(this.action);
+  SetDuplicateActionEvent(this.action, {required this.forceDefaultBox});
 }
 
 class UpdateMultiUnitEvent extends StockEvent {

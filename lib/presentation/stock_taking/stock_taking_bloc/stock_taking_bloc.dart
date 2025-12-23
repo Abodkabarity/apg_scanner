@@ -38,8 +38,25 @@ class StockBloc extends Bloc<StockEvent, StockState> {
       emit(state.copyWith(selectedUnit: event.unit));
     });
     on<SetDuplicateActionEvent>((event, emit) {
-      emit(state.copyWith(duplicateAction: event.action));
+      String? newUnit = state.selectedUnit;
+
+      if (event.forceDefaultBox && state.units.isNotEmpty) {
+        final boxUnit = state.units.firstWhere(
+          (u) => u.toLowerCase() == 'Box',
+          orElse: () => state.units.first,
+        );
+        newUnit = boxUnit;
+      }
+
+      emit(
+        state.copyWith(
+          duplicateAction: event.action,
+          selectedUnit: newUnit,
+          setNullSelectedUnit: newUnit == null,
+        ),
+      );
     });
+
     on<EditSingleUnitFromListEvent>((event, emit) async {
       await productsRepo.ensureLoaded();
 
