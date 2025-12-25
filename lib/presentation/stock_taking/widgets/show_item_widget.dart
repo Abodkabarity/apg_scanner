@@ -25,7 +25,7 @@ class ShowItemsList extends StatelessWidget {
       builder: (context, state) {
         return Container(
           margin: EdgeInsets.all(8),
-          padding: EdgeInsets.all(20),
+          padding: EdgeInsets.all(10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(15.r),
             color: const Color(0x1a4eb0de),
@@ -63,7 +63,7 @@ class ShowItemsList extends StatelessWidget {
                           style: TextStyle(
                             color: AppColor.secondaryColor,
                             fontWeight: FontWeight.bold,
-                            fontSize: 15.sp,
+                            fontSize: 14.sp,
                           ),
                         ),
                         leading: Text(
@@ -80,7 +80,7 @@ class ShowItemsList extends StatelessWidget {
                           style: TextStyle(
                             color: AppColor.secondaryColor,
                             fontWeight: FontWeight.bold,
-                            fontSize: 15.sp,
+                            fontSize: 14.sp,
                           ),
                         ),
                         onTap: () async {

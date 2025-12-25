@@ -115,7 +115,12 @@ class StockTakingPage extends StatelessWidget {
             }
 
             // Add
-            bloc.add(SetDuplicateActionEvent(DuplicateAction.add));
+            bloc.add(
+              SetDuplicateActionEvent(
+                DuplicateAction.add,
+                forceDefaultBox: true,
+              ),
+            );
           },
         ),
         BlocListener<StockBloc, StockState>(
