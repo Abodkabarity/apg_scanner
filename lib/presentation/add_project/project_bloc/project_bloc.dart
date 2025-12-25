@@ -1,6 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../data/model/project_model.dart';
 import '../../../data/repositories/project_repository.dart';
 import 'project_event.dart';
 import 'project_state.dart';
@@ -14,18 +13,12 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
     on<DeleteProjectEvent>(_onDeleteProject);
   }
 
+  // ================= CREATE =================
   Future<void> _onCreateProject(
     CreateProjectEvent event,
     Emitter<ProjectState> emit,
   ) async {
-    emit(
-      state.copyWith(
-        loading: true,
-        createSuccess: false,
-        deleteSuccess: false,
-        error: null,
-      ),
-    );
+    emit(const ProjectState(loading: true));
 
     try {
       final newProject = await repo.createProject(
@@ -33,76 +26,62 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
         event.projectType,
       );
 
-      emit(
-        state.copyWith(
-          loading: false,
-          createSuccess: true,
-          deleteSuccess: false,
-          projects: repo.getAll(),
-          project: newProject,
-        ),
-      );
+      final all = await repo.loadAllProjects();
+      final filtered = all
+          .where((p) => p.projectType == event.projectType)
+          .toList();
 
-      emit(state.copyWith(createSuccess: false, deleteSuccess: false));
-    } catch (e) {
       emit(
-        state.copyWith(
+        ProjectState(
           loading: false,
-          createSuccess: false,
-          deleteSuccess: false,
-          error: e.toString(),
+          projects: filtered,
+          project: newProject,
+          createSuccess: true,
         ),
       );
+    } catch (e) {
+      emit(ProjectState(error: e.toString()));
     }
   }
 
+  // ================= LOAD =================
   Future<void> _onLoadProjects(
     LoadProjectsEvent event,
     Emitter<ProjectState> emit,
   ) async {
-    emit(state.copyWith(loading: true, error: null));
+    emit(const ProjectState(loading: true));
 
     try {
-      await repo.loadAllProjects();
+      final all = await repo.loadAllProjects();
+      final filtered = all
+          .where((p) => p.projectType == event.projectType)
+          .toList();
 
-      emit(
-        state.copyWith(
-          loading: false,
-          projects: List<ProjectModel>.from(repo.getAll()),
-        ),
-      );
+      emit(ProjectState(loading: false, projects: filtered));
     } catch (e) {
-      emit(state.copyWith(loading: false, error: e.toString()));
+      emit(ProjectState(error: e.toString()));
     }
   }
 
+  // ================= DELETE (🔥 الحل هنا) =================
   Future<void> _onDeleteProject(
     DeleteProjectEvent event,
     Emitter<ProjectState> emit,
   ) async {
+    emit(const ProjectState(loading: true));
+
     try {
-      await repo.deleteProject(event.id);
+      final allAfterDelete = await repo.deleteProject(event.id);
 
-      final updatedList = List<ProjectModel>.from(repo.getAll());
+      final filtered = allAfterDelete
+          .where((p) => p.projectType == event.projectType)
+          .toList();
 
       emit(
-        state.copyWith(
-          loading: false,
-          createSuccess: false,
-          deleteSuccess: true,
-          projects: updatedList,
-        ),
+        ProjectState(loading: false, projects: filtered, deleteSuccess: true),
       );
-
-      emit(state.copyWith(deleteSuccess: false, createSuccess: false));
     } catch (e) {
-      emit(
-        state.copyWith(
-          loading: false,
-          deleteSuccess: false,
-          error: e.toString(),
-        ),
-      );
+      emit(ProjectState(error: e.toString()));
     }
   }
 }

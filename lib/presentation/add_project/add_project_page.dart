@@ -12,8 +12,12 @@ import '../../core/app_color/app_color.dart';
 import '../../core/app_images/app_images.dart';
 import '../../core/constant/project_type.dart';
 import '../../core/di/injection.dart';
+import '../../data/repositories/near_expiry_repository.dart';
 import '../../data/repositories/products_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
+import '../near_expiry/near_expiry_bloc/near_expiry_bloc.dart';
+import '../near_expiry/near_expiry_bloc/near_expiry_event.dart';
+import '../near_expiry/near_expiry_page.dart';
 import '../stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
 import '../stock_taking/stock_taking_bloc/stock_taking_event.dart';
 
@@ -48,9 +52,12 @@ class AddProjectPage extends StatelessWidget {
       ),
 
       body: BlocListener<ProjectBloc, ProjectState>(
+        listenWhen: (prev, curr) => prev.createSuccess != curr.createSuccess,
         listener: (context, state) {
-          if (state.createSuccess) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (state.createSuccess && state.project != null) {
+            final project = state.project!;
+
+            if (projectType == ProjectType.stockTaking) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -58,26 +65,43 @@ class AddProjectPage extends StatelessWidget {
                     create: (_) => StockBloc(
                       getIt<StockRepository>(),
                       getIt<ProductsRepository>(),
-                    )..add(LoadStockEvent(state.projects.last.id)),
-                    child: StockTakingPage(projects: state.projects.last),
+                    )..add(LoadStockEvent(project.id.toString())),
+                    child: StockTakingPage(projects: project),
                   ),
                 ),
               );
-            });
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider(
+                    create: (_) => NearExpiryBloc(
+                      getIt<NearExpiryRepository>(),
+                      getIt<ProductsRepository>(),
+                    )..add(LoadNearExpiryEvent(project.id.toString())),
+                    child: NearExpiryPage(projects: project),
+                  ),
+                ),
+              );
+            }
           }
         },
-        child: Stack(
-          children: [
-            BackGroundWidget(),
-            BlocBuilder<ProjectBloc, ProjectState>(
-              builder: (context, state) {
-                return Column(
+
+        child: BlocBuilder<ProjectBloc, ProjectState>(
+          builder: (context, state) {
+            return Stack(
+              children: [
+                BackGroundWidget(),
+                Column(
                   children: [
                     Expanded(
                       child: ListView.builder(
+                        key: ValueKey(state.projects.map((e) => e.id).join()),
+
                         itemCount: state.projects.length,
                         itemBuilder: (context, i) => ListProjectWidget(
                           projectName: state.projects[i].name,
+                          projects: state.projects[i],
                           onDelete: () {
                             showDialog(
                               context: context,
@@ -99,7 +123,7 @@ class AddProjectPage extends StatelessWidget {
                                         Expanded(
                                           child: TextButton(
                                             onPressed: () =>
-                                                Navigator.pop(context),
+                                                Navigator.pop(dialogContext),
                                             child: const Text(
                                               "Cancel",
                                               style: TextStyle(
@@ -112,20 +136,13 @@ class AddProjectPage extends StatelessWidget {
                                         Expanded(
                                           child: ElevatedButton(
                                             onPressed: () {
-                                              dialogContext
-                                                  .read<ProjectBloc>()
-                                                  .add(
-                                                    DeleteProjectEvent(
-                                                      state.projects[i].id,
-                                                    ),
-                                                  );
-                                              dialogContext
-                                                  .read<ProjectBloc>()
-                                                  .add(
-                                                    LoadProjectsEvent(
-                                                      projectType,
-                                                    ),
-                                                  );
+                                              context.read<ProjectBloc>().add(
+                                                DeleteProjectEvent(
+                                                  state.projects[i].id,
+                                                  projectType,
+                                                ),
+                                              );
+
                                               Navigator.pop(dialogContext);
                                             },
                                             child: Text(
@@ -137,7 +154,6 @@ class AddProjectPage extends StatelessWidget {
                                             ),
                                           ),
                                         ),
-                                        SizedBox(width: 5.w),
                                       ],
                                     ),
                                   ],
@@ -145,7 +161,7 @@ class AddProjectPage extends StatelessWidget {
                               ),
                             );
                           },
-                          projects: state.projects[i],
+                          projectType: projectType,
                         ),
                       ),
                     ),
@@ -156,19 +172,18 @@ class AddProjectPage extends StatelessWidget {
                         onPressed: () {
                           showDialog(
                             context: context,
-                            builder: (dialogContext) => AddProjectDialog(
+                            builder: (_) => AddProjectDialog(
                               projectController: projectController,
-                              onPressed: () async {
+                              onPressed: () {
                                 if (projectController.text.isNotEmpty) {
-                                  dialogContext.read<ProjectBloc>().add(
+                                  context.read<ProjectBloc>().add(
                                     CreateProjectEvent(
                                       projectController.text.trim(),
                                       projectType,
                                     ),
                                   );
                                 }
-
-                                Navigator.pop(dialogContext);
+                                Navigator.pop(context);
                                 projectController.clear();
                               },
                             ),
@@ -193,16 +208,16 @@ class AddProjectPage extends StatelessWidget {
                               ),
                             ),
                             SizedBox(width: 10.w),
-                            Icon(Icons.add, size: 25),
+                            Icon(Icons.add),
                           ],
                         ),
                       ),
                     ),
                   ],
-                );
-              },
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -268,9 +283,11 @@ class ListProjectWidget extends StatelessWidget {
     required this.projectName,
     required this.onDelete,
     required this.projects,
+    required this.projectType,
   });
   final String projectName;
   final ProjectModel projects;
+  final ProjectType projectType;
 
   final void Function() onDelete;
   @override
@@ -290,18 +307,33 @@ class ListProjectWidget extends StatelessWidget {
           icon: Icon(Icons.delete, color: AppColor.secondaryColor),
         ),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BlocProvider(
-                create: (_) => StockBloc(
-                  getIt<StockRepository>(),
-                  getIt<ProductsRepository>(),
-                )..add(LoadStockEvent(projects.id.toString())),
-                child: StockTakingPage(projects: projects),
+          if (projectType == ProjectType.stockTaking) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BlocProvider(
+                  create: (_) => StockBloc(
+                    getIt<StockRepository>(),
+                    getIt<ProductsRepository>(),
+                  )..add(LoadStockEvent(projects.id.toString())),
+                  child: StockTakingPage(projects: projects),
+                ),
               ),
-            ),
-          );
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BlocProvider(
+                  create: (_) => NearExpiryBloc(
+                    getIt<NearExpiryRepository>(),
+                    getIt<ProductsRepository>(),
+                  )..add(LoadNearExpiryEvent(projects.id.toString())),
+                  child: NearExpiryPage(projects: projects),
+                ),
+              ),
+            );
+          }
         },
       ),
     );

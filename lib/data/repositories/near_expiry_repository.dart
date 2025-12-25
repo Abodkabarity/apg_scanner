@@ -198,9 +198,58 @@ class NearExpiryRepository {
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
         .trim();
 
-    await ExcelExporter.saveExcelWithSystemPicker(
+    await ExcelExporter.saveNearExpiryExcel(
       data,
       fileName: 'near_expiry_$safeName.xlsx',
     );
+  }
+
+  Future<void> sendExcelByEmail({
+    required String projectId,
+    required String projectName,
+    required String toEmail,
+  }) async {
+    final items = (await loadItems(
+      projectId,
+    )).where((e) => !e.isDeleted).toList();
+
+    if (items.isEmpty) {
+      throw Exception("No data to send");
+    }
+
+    final data = items.map((e) {
+      return {
+        'branch': e.branchName,
+        'item_code': e.itemCode,
+        'item_name': e.itemName,
+        'unit_type': e.unitType,
+        'quantity': e.quantity,
+        'near_expiry': e.nearExpiry.toIso8601String().split('T').first,
+      };
+    }).toList();
+
+    final safeName = projectName
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
+        .trim();
+
+    await ExcelExporter.saveNearExpiryExcel(
+      data,
+      fileName: 'near_expiry_$safeName.xlsx',
+    );
+  }
+
+  Future<void> updateItemQtyAndExpiry({
+    required NearExpiryItemModel item,
+    required int qty,
+    required DateTime nearExpiry,
+  }) async {
+    final updated = item.copyWith(
+      quantity: qty,
+      nearExpiry: DateTime(nearExpiry.year, nearExpiry.month, 1),
+      updatedAt: DateTime.now(),
+      isSynced: false,
+    );
+
+    await local.saveOrUpdate(updated);
   }
 }

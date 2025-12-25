@@ -2,14 +2,18 @@ import 'package:apg_scanner/data/repositories/auth_repository.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../data/remote/near_expiry_remote_service.dart';
 import '../../data/remote/products_remote_service.dart';
 import '../../data/remote/stock_remote_service.dart';
 import '../../data/repositories/branch_repository.dart';
+import '../../data/repositories/near_expiry_repository.dart';
 import '../../data/repositories/products_repository.dart';
 import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
 import '../../data/services/connectivity_service.dart';
 import '../../data/services/local_storage_service.dart';
+import '../../data/services/near_expiry_export_service.dart';
+import '../../data/services/near_expiry_local_service.dart';
 import '../../data/services/products_local_service.dart';
 import '../../data/services/products_sync_service.dart';
 import '../../data/services/stock_export_service.dart';
@@ -39,7 +43,9 @@ void setupGetIt() {
   );
 
   getIt.registerFactory<LoginBloc>(() => LoginBloc(getIt<AuthRepository>()));
-  getIt.registerLazySingleton<ProjectBloc>(() => ProjectBloc(getIt()));
+  getIt.registerFactory<ProjectBloc>(
+    () => ProjectBloc(getIt<ProjectRepository>()),
+  );
 
   // Products
   getIt.registerLazySingleton(() => ProductsLocalService());
@@ -50,6 +56,26 @@ void setupGetIt() {
     () => ProductsRepository(
       local: getIt<ProductsLocalService>(),
       remote: getIt<ProductsRemoteService>(),
+    ),
+  );
+  // ================= NEAR EXPIRY =================
+
+  // Local
+  getIt.registerLazySingleton<NearExpiryLocalService>(
+    () => NearExpiryLocalService(),
+  );
+
+  // Remote
+  getIt.registerLazySingleton<NearExpiryRemoteService>(
+    () => NearExpiryRemoteService(Supabase.instance.client),
+  );
+
+  // Repository
+  getIt.registerLazySingleton<NearExpiryRepository>(
+    () => NearExpiryRepository(
+      getIt<NearExpiryLocalService>(),
+      getIt<NearExpiryRemoteService>(),
+      getIt<UserSession>(),
     ),
   );
 
@@ -74,6 +100,9 @@ void setupGetIt() {
       getIt<ProductsRepository>(),
       Supabase.instance.client,
     ),
+  );
+  getIt.registerLazySingleton(
+    () => NearExpiryExportService(getIt<NearExpiryRepository>()),
   );
 
   getIt.registerLazySingleton(

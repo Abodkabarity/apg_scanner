@@ -21,7 +21,6 @@ class ScanBarcodeEvent extends NearExpiryEvent {
 class DeleteNearExpiryEvent extends NearExpiryEvent {
   final List<String> ids;
   final String projectId;
-
   const DeleteNearExpiryEvent({required this.ids, required this.projectId});
 }
 
@@ -35,20 +34,18 @@ class ChangeUnitEvent extends NearExpiryEvent {
   const ChangeUnitEvent(this.unit);
 }
 
-/// 🔥 ONLY CHANGE: added nearExpiry field
 class ChangeNearExpiryDateEvent extends NearExpiryEvent {
-  final DateTime? nearExpiry;
+  final DateTime nearExpiry;
+
   const ChangeNearExpiryDateEvent(this.nearExpiry);
 }
 
-/// 🔥 ONLY CHANGE: Approve needs nearExpiry (but you said you want dropdown near expiry)
 class ApproveItemEvent extends NearExpiryEvent {
   final String projectId;
   final String barcode;
   final String unit;
   final int qty;
   final String projectName;
-
   final DateTime nearExpiry;
 
   const ApproveItemEvent({
@@ -122,24 +119,23 @@ class SendByEmailEvent extends NearExpiryEvent {
 }
 
 class SetDuplicateActionEvent extends NearExpiryEvent {
-  final DuplicateAction action;
+  final NearDuplicateAction action;
   SetDuplicateActionEvent(this.action);
 }
 
-/// نفس الفكرة (Multi unit) لكن لاحظ: group يجب أن “يمثل near expiry” في UI.
-/// إذا كنت تريد MultiUnit per same expiry فقط، group needs to be by itemCode+nearExpiry.
-/// (سنعملها داخل bloc grouping)
 class UpdateMultiUnitEvent extends NearExpiryEvent {
   final String projectId;
   final String projectName;
   final StockItemGroup group;
   final Map<String, int> newUnitQty;
+  final DateTime newNearExpiry;
 
   UpdateMultiUnitEvent({
     required this.projectId,
+    required this.projectName,
     required this.group,
     required this.newUnitQty,
-    required this.projectName,
+    required this.newNearExpiry,
   });
 }
 

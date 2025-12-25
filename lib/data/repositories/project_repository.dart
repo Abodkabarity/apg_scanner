@@ -9,14 +9,11 @@ class ProjectRepository {
   final LocalStorageService local;
   final UserSession session;
 
-  List<ProjectModel> projects = [];
+  List<ProjectModel> _projects = [];
 
   ProjectRepository(this.local, this.session);
 
-  List<ProjectModel> getByType(ProjectType type) {
-    return projects.where((p) => p.projectType == type).toList();
-  }
-
+  // ================= KEY =================
   String _userKey() {
     final userId = session.userId;
     if (userId == null) {
@@ -26,20 +23,33 @@ class ProjectRepository {
   }
 
   // ================= LOAD =================
-  Future<void> loadAllProjects() async {
+  Future<List<ProjectModel>> loadAllProjects() async {
     final userId = session.userId;
     if (userId == null) {
-      projects = [];
-      return;
+      _projects = [];
+      return [];
     }
 
-    projects = await local.loadProjects(_userKey());
+    final loaded = await local.loadProjects(_userKey());
+    _projects = List<ProjectModel>.from(loaded); // 🔥 NEW LIST
+    return List<ProjectModel>.from(_projects);
+  }
+
+  // ================= GET =================
+  List<ProjectModel> getByType(ProjectType type) {
+    return List<ProjectModel>.from(
+      _projects.where((p) => p.projectType == type),
+    );
+  }
+
+  List<ProjectModel> getAll() {
+    return List<ProjectModel>.from(_projects);
   }
 
   // ================= CREATE =================
   Future<ProjectModel> createProject(
     String name,
-    ProjectType projectType, // 🔥 NEW
+    ProjectType projectType,
   ) async {
     final userId = session.userId;
     if (userId == null) {
@@ -55,24 +65,22 @@ class ProjectRepository {
       projectType: projectType,
     );
 
-    projects.add(newProject);
-
-    await local.saveProjects(_userKey(), projects);
+    _projects = [..._projects, newProject]; // 🔥 NEW LIST
+    await local.saveProjects(_userKey(), _projects);
 
     return newProject;
   }
 
   // ================= DELETE =================
-  Future<void> deleteProject(String id) async {
-    projects.removeWhere((p) => p.id == id);
+  Future<List<ProjectModel>> deleteProject(String id) async {
+    _projects = _projects.where((p) => p.id != id).toList(); // 🔥 NEW LIST
+    await local.saveProjects(_userKey(), _projects);
 
-    await local.saveProjects(_userKey(), projects);
+    return List<ProjectModel>.from(_projects);
   }
 
-  // ================= OTHERS =================
+  // ================= CLEAR =================
   void clearCache() {
-    projects.clear();
+    _projects = [];
   }
-
-  List<ProjectModel> getAll() => projects;
 }

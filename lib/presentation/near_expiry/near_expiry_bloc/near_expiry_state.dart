@@ -4,17 +4,17 @@ import '../../../data/model/near_expiry_item_model.dart';
 import '../../../data/model/products_model.dart';
 import '../../../data/model/stock_item_group.dart';
 
-enum DuplicateAction { add, edit }
+enum NearDuplicateAction { add, edit }
 
 class NearExpiryState extends Equatable {
   final bool loading;
   final List<NearExpiryItemModel> items;
+  final List<DateTime> nearExpiryOptions;
 
   final ProductModel? currentProduct;
   final List<String> units;
   final String? selectedUnit;
 
-  /// 🔥 ONLY CHANGE: selected expiry date in form
   final DateTime? selectedNearExpiry;
 
   final String? error;
@@ -33,7 +33,7 @@ class NearExpiryState extends Equatable {
   final bool isProcessing;
   final String? processingMessage;
 
-  final DuplicateAction duplicateAction;
+  final NearDuplicateAction duplicateAction;
 
   final List<StockItemGroup> groupedItems;
   final List<StockItemGroup> filteredGroupedItems;
@@ -46,9 +46,9 @@ class NearExpiryState extends Equatable {
     this.currentProduct,
     this.units = const [],
     this.selectedUnit,
+    this.nearExpiryOptions = const [],
 
     this.selectedNearExpiry,
-
     this.error,
     this.success,
     this.suggestions = const [],
@@ -60,7 +60,7 @@ class NearExpiryState extends Equatable {
     this.productExistsDialogShown = false,
     this.isUploading = false,
     this.uploadMessage,
-    this.duplicateAction = DuplicateAction.edit,
+    this.duplicateAction = NearDuplicateAction.edit,
     this.editingRowId,
     this.isProcessing = false,
     this.processingMessage,
@@ -74,6 +74,7 @@ class NearExpiryState extends Equatable {
 
     ProductModel? currentProduct,
     bool setNullProduct = false,
+    List<DateTime>? nearExpiryOptions,
 
     List<String>? units,
 
@@ -103,7 +104,7 @@ class NearExpiryState extends Equatable {
     String? processingMessage,
     bool clearProcessingMessage = false,
 
-    DuplicateAction? duplicateAction,
+    NearDuplicateAction? duplicateAction,
 
     String? editingRowId,
     bool clearEditingRowId = false,
@@ -128,6 +129,7 @@ class NearExpiryState extends Equatable {
       selectedNearExpiry: clearSelectedNearExpiry
           ? null
           : (selectedNearExpiry ?? this.selectedNearExpiry),
+      nearExpiryOptions: nearExpiryOptions ?? this.nearExpiryOptions,
 
       error: error,
       success: success,

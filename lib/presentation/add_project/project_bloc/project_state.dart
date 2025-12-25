@@ -34,8 +34,10 @@ class ProjectState extends Equatable {
   }) {
     return ProjectState(
       loading: loading ?? this.loading,
-      createSuccess: createSuccess ?? false,
-      deleteSuccess: deleteSuccess ?? false,
+
+      createSuccess: createSuccess ?? this.createSuccess,
+      deleteSuccess: deleteSuccess ?? this.deleteSuccess,
+
       error: error,
       project: project ?? this.project,
       projects: projects ?? this.projects,

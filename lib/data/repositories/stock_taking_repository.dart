@@ -268,7 +268,7 @@ class StockRepository {
     final safeName = projectName
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
         .trim();
-    await ExcelExporter.saveExcelWithSystemPicker(
+    await ExcelExporter.saveStockTakingExcel(
       data,
       fileName: 'stock_$safeName.xlsx',
     );

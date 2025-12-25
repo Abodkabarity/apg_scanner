@@ -17,6 +17,7 @@ import '../login_page/widgets/auth_gate_widget.dart';
 
 class SelectProjectPage extends StatelessWidget {
   const SelectProjectPage({super.key});
+
   Future<void> _logout(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -99,15 +100,14 @@ class SelectProjectPage extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) {
-                            return AddProjectPage(
+                          builder: (_) => BlocProvider(
+                            create: (_) => getIt<ProjectBloc>()
+                              ..add(LoadProjectsEvent(ProjectType.stockTaking)),
+                            child: AddProjectPage(
                               projectType: ProjectType.stockTaking,
-                            );
-                          },
+                            ),
+                          ),
                         ),
-                      );
-                      context.read<ProjectBloc>().add(
-                        LoadProjectsEvent(ProjectType.stockTaking),
                       );
                     },
 
@@ -136,15 +136,14 @@ class SelectProjectPage extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) {
-                            return AddProjectPage(
+                          builder: (_) => BlocProvider(
+                            create: (_) => getIt<ProjectBloc>()
+                              ..add(LoadProjectsEvent(ProjectType.nearExpiry)),
+                            child: AddProjectPage(
                               projectType: ProjectType.nearExpiry,
-                            );
-                          },
+                            ),
+                          ),
                         ),
-                      );
-                      context.read<ProjectBloc>().add(
-                        LoadProjectsEvent(ProjectType.nearExpiry),
                       );
                     },
 

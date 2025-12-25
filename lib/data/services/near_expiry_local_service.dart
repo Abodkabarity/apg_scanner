@@ -12,7 +12,6 @@ class NearExpiryLocalService {
       throw Exception("User not logged in - userId is null");
     }
 
-    // 🔥 Box مستقل تمامًا عن stock taking
     final boxName = 'near_expiry_items_$userId';
 
     return await Hive.openBox(boxName);

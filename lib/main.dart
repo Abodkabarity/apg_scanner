@@ -9,6 +9,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/di/injection.dart';
+import 'data/model/near_expiry_item_model.dart';
 import 'data/model/stock_taking_model.dart';
 
 Future<void> main() async {
@@ -19,6 +20,7 @@ Future<void> main() async {
 
   // Register Adapters
   Hive.registerAdapter(StockItemModelAdapter());
+  Hive.registerAdapter(NearExpiryItemModelAdapter());
 
   // Load .env
   await dotenv.load(fileName: ".env");

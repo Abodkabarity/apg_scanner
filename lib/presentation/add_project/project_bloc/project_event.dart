@@ -33,7 +33,8 @@ class LoadProjectsEvent extends ProjectEvent {
 
 class DeleteProjectEvent extends ProjectEvent {
   final String id;
-  const DeleteProjectEvent(this.id);
+  final ProjectType projectType;
+  const DeleteProjectEvent(this.id, this.projectType);
 }
 
 class LogoutRequested extends ProjectEvent {}
