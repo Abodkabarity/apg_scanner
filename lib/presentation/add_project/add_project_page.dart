@@ -7,86 +7,40 @@ import 'package:apg_scanner/presentation/widgets/background_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_color/app_color.dart';
 import '../../core/app_images/app_images.dart';
+import '../../core/constant/project_type.dart';
 import '../../core/di/injection.dart';
-import '../../core/session/user_session.dart';
 import '../../data/repositories/products_repository.dart';
-import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
-import '../login_page/widgets/auth_gate_widget.dart';
 import '../stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
 import '../stock_taking/stock_taking_bloc/stock_taking_event.dart';
 
 class AddProjectPage extends StatelessWidget {
-  AddProjectPage({super.key});
+  final ProjectType projectType;
+
+  AddProjectPage({super.key, required this.projectType});
   final TextEditingController projectController = TextEditingController();
-  Future<void> _logout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Logout"),
-        content: const Text("Are you sure you want to logout?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(color: AppColor.secondaryColor),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              "Logout",
-              style: TextStyle(color: AppColor.secondaryColor),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    await Supabase.instance.client.auth.signOut();
-    getIt<UserSession>().clear();
-    getIt<ProjectRepository>().clearCache();
-
-    if (!context.mounted) return;
-
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const AuthGate()),
-      (_) => false,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Projects",
+          projectType == ProjectType.stockTaking
+              ? "Stock Taking Project"
+              : "Near Expiry Project",
           style: TextStyle(
             color: AppColor.secondaryColor,
             fontWeight: FontWeight.bold,
           ),
         ),
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 20),
-          child: Image.asset(AppImages.logo, fit: BoxFit.cover),
-        ),
+
         actions: [
           Padding(
-            padding: EdgeInsets.only(right: 10.w),
-            child: IconButton(
-              onPressed: () async {
-                await _logout(context);
-              },
-              icon: Icon(Icons.login_outlined, color: Colors.white, size: 30),
-            ),
+            padding: const EdgeInsets.only(right: 20),
+            child: Image.asset(AppImages.logo, fit: BoxFit.cover),
           ),
         ],
         backgroundColor: AppColor.primaryColor,
@@ -167,7 +121,11 @@ class AddProjectPage extends StatelessWidget {
                                                   );
                                               dialogContext
                                                   .read<ProjectBloc>()
-                                                  .add(LoadProjectsEvent());
+                                                  .add(
+                                                    LoadProjectsEvent(
+                                                      projectType,
+                                                    ),
+                                                  );
                                               Navigator.pop(dialogContext);
                                             },
                                             child: Text(
@@ -205,6 +163,7 @@ class AddProjectPage extends StatelessWidget {
                                   dialogContext.read<ProjectBloc>().add(
                                     CreateProjectEvent(
                                       projectController.text.trim(),
+                                      projectType,
                                     ),
                                   );
                                 }

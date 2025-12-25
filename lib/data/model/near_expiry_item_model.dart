@@ -1,9 +1,9 @@
 import 'package:hive/hive.dart';
 
-part 'stock_taking_model.g.dart';
+part 'near_expiry_item_model.g.dart';
 
-@HiveType(typeId: 5)
-class StockItemModel {
+@HiveType(typeId: 6)
+class NearExpiryItemModel {
   @HiveField(0)
   final String id;
 
@@ -11,120 +11,108 @@ class StockItemModel {
   final String projectId;
 
   @HiveField(2)
-  final String branchName;
+  final String projectName;
 
   @HiveField(3)
-  final String itemId;
+  final String branchName;
 
   @HiveField(4)
-  final String itemCode;
+  final String barcode;
 
   @HiveField(5)
-  final String itemName;
+  final String itemCode;
 
   @HiveField(6)
-  final String unit;
+  final String itemName;
 
   @HiveField(7)
-  final String subUnit;
+  final String unitType;
 
   @HiveField(8)
   final int quantity;
 
   @HiveField(9)
-  final num subQuantity;
+  final DateTime nearExpiry;
 
   @HiveField(10)
-  final String barcode;
-
-  @HiveField(11)
   final bool isDeleted;
 
-  @HiveField(12)
+  @HiveField(11)
   final bool isSynced;
 
-  @HiveField(13)
+  @HiveField(12)
   final DateTime createdAt;
 
-  @HiveField(14)
+  @HiveField(13)
   final DateTime updatedAt;
-  @HiveField(15)
-  final String projectName;
-  StockItemModel({
+
+  NearExpiryItemModel({
     required this.id,
     required this.projectId,
+    required this.projectName,
     required this.branchName,
-    required this.itemId,
+    required this.barcode,
     required this.itemCode,
     required this.itemName,
-    required this.unit,
-    required this.subUnit,
+    required this.unitType,
     required this.quantity,
-    required this.subQuantity,
-    required this.barcode,
+    required this.nearExpiry,
     required this.isDeleted,
     required this.isSynced,
     required this.createdAt,
     required this.updatedAt,
-    required this.projectName,
   });
 
-  StockItemModel copyWith({
+  NearExpiryItemModel copyWith({
     String? id,
     String? projectId,
     String? projectName,
     String? branchName,
-    String? itemId,
+    String? barcode,
     String? itemCode,
     String? itemName,
-    String? unit,
-    String? subUnit,
+    String? unitType,
     int? quantity,
-    num? subQuantity,
-    String? barcode,
+    DateTime? nearExpiry,
     bool? isDeleted,
     bool? isSynced,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
-    return StockItemModel(
+    return NearExpiryItemModel(
       id: id ?? this.id,
       projectId: projectId ?? this.projectId,
+      projectName: projectName ?? this.projectName,
       branchName: branchName ?? this.branchName,
-      itemId: itemId ?? this.itemId,
+      barcode: barcode ?? this.barcode,
       itemCode: itemCode ?? this.itemCode,
       itemName: itemName ?? this.itemName,
-      unit: unit ?? this.unit,
-      subUnit: subUnit ?? this.subUnit,
+      unitType: unitType ?? this.unitType,
       quantity: quantity ?? this.quantity,
-      subQuantity: subQuantity ?? this.subQuantity,
-      barcode: barcode ?? this.barcode,
+      nearExpiry: nearExpiry ?? this.nearExpiry,
       isDeleted: isDeleted ?? this.isDeleted,
       isSynced: isSynced ?? this.isSynced,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      projectName: projectName ?? this.projectName,
     );
   }
 
-  factory StockItemModel.fromJson(Map<String, dynamic> json) {
-    return StockItemModel(
+  factory NearExpiryItemModel.fromJson(Map<String, dynamic> json) {
+    return NearExpiryItemModel(
       id: json['id'],
       projectId: json['project_id'],
+      projectName: json['project_name'] ?? 'New Project',
       branchName: json['branch_name'] ?? '',
-      itemId: json['item_id'],
+      barcode: json['barcode'] ?? '',
       itemCode: json['item_code'],
       itemName: json['item_name'],
-      unit: json['unit'] ?? '',
-      subUnit: json['subunit'] ?? '',
-      quantity: json['quantity'] ?? 0,
-      subQuantity: json['sub_quantity'] ?? 0,
-      barcode: json['barcode'] ?? '',
+      unitType: json['unit_type'],
+      quantity: json['qty'] ?? 0,
+      nearExpiry: DateTime.parse(json['near_expiry']),
       isDeleted: json['is_deleted'] ?? false,
       isSynced: json['is_synced'] ?? false,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
-      projectName: json['project_name'] ?? "New Project",
     );
   }
 
@@ -134,14 +122,12 @@ class StockItemModel {
       'project_id': projectId,
       'project_name': projectName,
       'branch_name': branchName,
-      'item_id': itemId,
+      'barcode': barcode,
       'item_code': itemCode,
       'item_name': itemName,
-      'unit': unit,
-      'subunit': subUnit,
-      'quantity': quantity,
-      'sub_quantity': subQuantity,
-      'barcode': barcode,
+      'unit_type': unitType,
+      'qty': quantity,
+      'near_expiry': nearExpiry.toIso8601String(),
       'is_deleted': isDeleted,
       'is_synced': isSynced,
       'created_at': createdAt.toIso8601String(),

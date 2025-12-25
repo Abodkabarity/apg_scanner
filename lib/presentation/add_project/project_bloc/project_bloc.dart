@@ -28,7 +28,10 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
     );
 
     try {
-      final newProject = await repo.createProject(event.name);
+      final newProject = await repo.createProject(
+        event.name,
+        event.projectType,
+      );
 
       emit(
         state.copyWith(

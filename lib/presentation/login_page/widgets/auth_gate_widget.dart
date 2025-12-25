@@ -6,9 +6,7 @@ import '../../../core/app_color/app_color.dart';
 import '../../../core/di/injection.dart';
 import '../../../core/session/user_session.dart';
 import '../../../data/services/connectivity_service.dart';
-import '../../add_project/add_project_page.dart';
-import '../../add_project/project_bloc/project_bloc.dart';
-import '../../add_project/project_bloc/project_event.dart';
+import '../../select_project/select_project_page.dart';
 import '../login_block/login_bloc.dart';
 import '../login_block/login_event.dart';
 import '../login_page.dart';
@@ -127,8 +125,7 @@ class _AuthGateState extends State<AuthGate> {
 
         /// ✅ Logged in
         if (session != null) {
-          context.read<ProjectBloc>().add(LoadProjectsEvent());
-          return AddProjectPage(key: ValueKey(getIt<UserSession>().userId));
+          return SelectProjectPage(key: ValueKey(getIt<UserSession>().userId));
         }
 
         /// 🔐 Not logged in

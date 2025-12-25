@@ -1,5 +1,4 @@
 import 'package:apg_scanner/presentation/add_project/project_bloc/project_bloc.dart';
-import 'package:apg_scanner/presentation/add_project/project_bloc/project_event.dart';
 import 'package:apg_scanner/presentation/login_page/login_block/login_bloc.dart';
 import 'package:apg_scanner/splash_screen.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +17,7 @@ Future<void> main() async {
   // Hive
   await Hive.initFlutter();
 
-  // Register Adapters (IMPORTANT!)
+  // Register Adapters
   Hive.registerAdapter(StockItemModelAdapter());
 
   // Load .env
@@ -44,9 +43,7 @@ class APGScanner extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<LoginBloc>(create: (_) => getIt<LoginBloc>()),
-        BlocProvider<ProjectBloc>(
-          create: (_) => getIt<ProjectBloc>()..add(LoadProjectsEvent()),
-        ),
+        BlocProvider<ProjectBloc>(create: (_) => getIt<ProjectBloc>()),
       ],
       child: ScreenUtilInit(
         designSize: const Size(390, 844),

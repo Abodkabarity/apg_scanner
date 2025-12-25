@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../core/constant/project_type.dart';
+
 abstract class ProjectEvent extends Equatable {
   const ProjectEvent();
 
@@ -9,8 +11,8 @@ abstract class ProjectEvent extends Equatable {
 
 class CreateProjectEvent extends ProjectEvent {
   final String name;
-
-  const CreateProjectEvent(this.name);
+  final ProjectType projectType;
+  const CreateProjectEvent(this.name, this.projectType);
 
   @override
   List<Object?> get props => [name];
@@ -20,7 +22,14 @@ class LoadSavedProjectEvent extends ProjectEvent {}
 
 class ClearProjectEvent extends ProjectEvent {}
 
-class LoadProjectsEvent extends ProjectEvent {}
+class LoadProjectsEvent extends ProjectEvent {
+  final ProjectType projectType;
+
+  const LoadProjectsEvent(this.projectType);
+
+  @override
+  List<Object?> get props => [projectType];
+}
 
 class DeleteProjectEvent extends ProjectEvent {
   final String id;

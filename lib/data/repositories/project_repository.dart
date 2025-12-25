@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 
+import '../../core/constant/project_type.dart';
 import '../../core/session/user_session.dart';
 import '../model/project_model.dart';
 import '../services/local_storage_service.dart';
@@ -12,7 +13,10 @@ class ProjectRepository {
 
   ProjectRepository(this.local, this.session);
 
-  // 🔑 مفتاح التخزين حسب المستخدم
+  List<ProjectModel> getByType(ProjectType type) {
+    return projects.where((p) => p.projectType == type).toList();
+  }
+
   String _userKey() {
     final userId = session.userId;
     if (userId == null) {
@@ -29,12 +33,14 @@ class ProjectRepository {
       return;
     }
 
-    // 🔥 تحميل مشاريع هذا المستخدم فقط
     projects = await local.loadProjects(_userKey());
   }
 
   // ================= CREATE =================
-  Future<ProjectModel> createProject(String name) async {
+  Future<ProjectModel> createProject(
+    String name,
+    ProjectType projectType, // 🔥 NEW
+  ) async {
     final userId = session.userId;
     if (userId == null) {
       throw Exception("User not logged in");
@@ -46,11 +52,11 @@ class ProjectRepository {
       branch: session.branch!,
       createdAt: DateTime.now(),
       userId: userId,
+      projectType: projectType,
     );
 
     projects.add(newProject);
 
-    // 🔥 حفظ مشاريع هذا المستخدم فقط
     await local.saveProjects(_userKey(), projects);
 
     return newProject;
