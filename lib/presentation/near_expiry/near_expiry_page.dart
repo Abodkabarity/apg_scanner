@@ -2,8 +2,8 @@ import 'package:apg_scanner/core/app_color/app_color.dart';
 import 'package:apg_scanner/data/model/products_model.dart';
 import 'package:apg_scanner/data/model/project_model.dart';
 import 'package:apg_scanner/presentation/near_expiry/near_expiry_details_block.dart';
-import 'package:apg_scanner/presentation/near_expiry/widgets/export_botton_sheet.dart';
-import 'package:apg_scanner/presentation/near_expiry/widgets/show_item_widget.dart';
+import 'package:apg_scanner/presentation/near_expiry/widgets/near_expiry_export_botton_sheet.dart';
+import 'package:apg_scanner/presentation/near_expiry/widgets/near_expiry_show_item_widget.dart';
 import 'package:apg_scanner/presentation/stock_taking/widgets/barcode_scanner_page.dart';
 import 'package:apg_scanner/presentation/stock_taking/widgets/search_results_page.dart';
 import 'package:flutter/material.dart';
@@ -479,8 +479,20 @@ class NearExpiryPage extends StatelessWidget {
                                       ),
                                     ],
                                   ),
+                                  labelStyle: TextStyle(
+                                    color: AppColor.secondaryColor,
+                                  ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(25.r),
+                                    borderSide: BorderSide(
+                                      color: AppColor.primaryColor,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(25.r),
+                                    borderSide: BorderSide(
+                                      color: AppColor.primaryColor,
+                                    ),
                                   ),
                                 ),
                               ),

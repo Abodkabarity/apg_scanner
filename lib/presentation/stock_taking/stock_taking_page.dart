@@ -454,8 +454,20 @@ class StockTakingPage extends StatelessWidget {
                                       ),
                                     ],
                                   ),
+                                  labelStyle: TextStyle(
+                                    color: AppColor.secondaryColor,
+                                  ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(25.r),
+                                    borderSide: BorderSide(
+                                      color: AppColor.primaryColor,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(25.r),
+                                    borderSide: BorderSide(
+                                      color: AppColor.primaryColor,
+                                    ),
                                   ),
                                 ),
                               ),

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../core/app_color/app_color.dart';
 import '../../core/di/injection.dart';
 import '../../data/repositories/stock_taking_repository.dart';
 import '../widgets/top_snackbar.dart';
@@ -44,8 +45,14 @@ class ProductDetailsBlock extends StatelessWidget {
               fillColor: Colors.white,
               filled: true,
               labelText: "Name",
+              labelStyle: TextStyle(color: AppColor.secondaryColor),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(25.r),
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(color: AppColor.primaryColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(color: AppColor.primaryColor),
               ),
             ),
           ),
@@ -53,10 +60,9 @@ class ProductDetailsBlock extends StatelessWidget {
 
           Row(
             children: [
-              const Expanded(flex: 2, child: DropDownUnitType()),
+              const Expanded(child: DropDownUnitType()),
               SizedBox(width: 10.w),
               Expanded(
-                flex: 3,
                 child: TextField(
                   focusNode: qtyFocusNode,
                   controller: qtyController,
@@ -66,8 +72,14 @@ class ProductDetailsBlock extends StatelessWidget {
                     filled: true,
                     labelText: "Quantity",
 
+                    labelStyle: TextStyle(color: AppColor.secondaryColor),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25.r),
+                      borderRadius: BorderRadius.circular(12.r),
+                      borderSide: BorderSide(color: AppColor.primaryColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      borderSide: BorderSide(color: AppColor.primaryColor),
                     ),
                   ),
                   onEditingComplete: () {

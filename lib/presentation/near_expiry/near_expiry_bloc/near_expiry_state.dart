@@ -14,6 +14,8 @@ class NearExpiryState extends Equatable {
   final ProductModel? currentProduct;
   final List<String> units;
   final String? selectedUnit;
+  final Map<String, int> editingUnitQty;
+  final DateTime? editingNearExpiry;
 
   final DateTime? selectedNearExpiry;
 
@@ -47,6 +49,8 @@ class NearExpiryState extends Equatable {
     this.units = const [],
     this.selectedUnit,
     this.nearExpiryOptions = const [],
+    this.editingUnitQty = const {},
+    this.editingNearExpiry,
 
     this.selectedNearExpiry,
     this.error,
@@ -77,6 +81,9 @@ class NearExpiryState extends Equatable {
     List<DateTime>? nearExpiryOptions,
 
     List<String>? units,
+    Map<String, int>? editingUnitQty,
+    DateTime? editingNearExpiry,
+    bool clearEditingNearExpiry = false,
 
     String? selectedUnit,
     bool setNullSelectedUnit = false,
@@ -130,6 +137,10 @@ class NearExpiryState extends Equatable {
           ? null
           : (selectedNearExpiry ?? this.selectedNearExpiry),
       nearExpiryOptions: nearExpiryOptions ?? this.nearExpiryOptions,
+      editingUnitQty: editingUnitQty ?? this.editingUnitQty,
+      editingNearExpiry: clearEditingNearExpiry
+          ? null
+          : (editingNearExpiry ?? this.editingNearExpiry),
 
       error: error,
       success: success,
@@ -188,5 +199,7 @@ class NearExpiryState extends Equatable {
     groupedItems,
     filteredGroupedItems,
     editingRowId,
+    editingUnitQty,
+    editingNearExpiry,
   ];
 }

@@ -152,3 +152,14 @@ class EditSingleUnitFromListEvent extends NearExpiryEvent {
     required this.qty,
   });
 }
+
+class UpdateEditingUnitQtyEvent extends NearExpiryEvent {
+  final String unit;
+  final int qty;
+  const UpdateEditingUnitQtyEvent(this.unit, this.qty);
+}
+
+class UpdateEditingNearExpiryEvent extends NearExpiryEvent {
+  final DateTime nearExpiry;
+  const UpdateEditingNearExpiryEvent(this.nearExpiry);
+}

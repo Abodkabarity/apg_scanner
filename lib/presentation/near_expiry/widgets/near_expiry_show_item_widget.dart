@@ -7,7 +7,7 @@ import '../../../data/model/stock_item_group.dart';
 import '../near_expiry_bloc/near_expiry_bloc.dart';
 import '../near_expiry_bloc/near_expiry_event.dart';
 import '../near_expiry_bloc/near_expiry_state.dart';
-import 'multi_unit_dialog.dart';
+import 'near_expiry_multi_unit_dialog.dart';
 
 class NearExpiryShowItemsList extends StatelessWidget {
   const NearExpiryShowItemsList({
@@ -44,8 +44,14 @@ class NearExpiryShowItemsList extends StatelessWidget {
                   );
                 },
                 decoration: InputDecoration(
+                  labelStyle: TextStyle(color: AppColor.secondaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(25.r),
+                    borderSide: BorderSide(color: AppColor.primaryColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.r),
+                    borderSide: BorderSide(color: AppColor.primaryColor),
                   ),
                   fillColor: Colors.white,
                   filled: true,
@@ -84,18 +90,62 @@ class NearExpiryShowItemsList extends StatelessWidget {
                           ),
                         ),
                         trailing: Text(
-                          "Qty ${group.totalDisplayQty}",
+                          "Qty ${group.totalSubQty.toStringAsFixed(2)}",
                           style: TextStyle(
                             color: AppColor.secondaryColor,
                             fontWeight: FontWeight.bold,
-                            fontSize: 14.sp,
+                            fontSize: 13.sp,
                           ),
                         ),
-
+                        leading: Text(
+                          "Box",
+                          style: TextStyle(
+                            color: AppColor.secondaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.sp,
+                          ),
+                        ),
                         // ---------------- Edit / Delete ----------------
                         onTap: () async {
                           final bloc = context.read<NearExpiryBloc>();
 
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text(
+                                "Edit Item",
+                                style: TextStyle(
+                                  color: AppColor.secondaryColor,
+                                ),
+                              ),
+                              content: const Text(
+                                "Do you want to edit this item?",
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text(
+                                    "No",
+                                    style: TextStyle(
+                                      color: AppColor.secondaryColor,
+                                    ),
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text(
+                                    "Yes",
+                                    style: TextStyle(
+                                      color: AppColor.secondaryColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (!context.mounted) return;
+
+                          if (confirm != true) return;
                           final product = bloc.productsRepo.products.firstWhere(
                             (p) => p.itemCode == group.itemCode,
                             orElse: () => throw Exception("Product not found"),
@@ -104,36 +154,38 @@ class NearExpiryShowItemsList extends StatelessWidget {
                           showDialog(
                             barrierDismissible: false,
                             context: context,
-                            builder: (_) => NearExpiryMultiUnitDialog(
-                              group: group,
+                            builder: (_) => BlocProvider.value(
+                              value: context.read<NearExpiryBloc>(),
+                              child: NearExpiryMultiUnitDialog(
+                                group: group,
 
-                              allUnits: bloc.productsRepo.getUnitsForProduct(
-                                product,
+                                allUnits: bloc.productsRepo.getUnitsForProduct(
+                                  product,
+                                ),
+
+                                numberSubUnit: product.numberSubUnit.toInt(),
+
+                                onApply: (newUnitQty, newNearExpiry) {
+                                  bloc.add(
+                                    UpdateMultiUnitEvent(
+                                      projectId: projectId,
+                                      projectName: projectName,
+                                      group: group,
+                                      newUnitQty: newUnitQty,
+                                      newNearExpiry: newNearExpiry,
+                                    ),
+                                  );
+                                },
+
+                                onDelete: () {
+                                  bloc.add(
+                                    DeleteNearExpiryEvent(
+                                      projectId: projectId,
+                                      ids: group.unitId.values.toList(),
+                                    ),
+                                  );
+                                },
                               ),
-
-                              numberSubUnit: product.numberSubUnit.toInt(),
-
-                              onApply: (newUnitQty, newNearExpiry) {
-                                bloc.add(
-                                  UpdateMultiUnitEvent(
-                                    projectId: projectId,
-                                    projectName: projectName,
-                                    group: group,
-                                    newUnitQty: newUnitQty,
-                                    newNearExpiry: newNearExpiry,
-                                  ),
-                                );
-                              },
-
-                              onDelete: () {
-                                bloc.add(
-                                  DeleteNearExpiryEvent(
-                                    projectId: projectId,
-                                    ids: group.unitId.values.toList(),
-                                  ),
-                                );
-                              },
-                              initialNearExpiry: group.nearExpiry!,
                             ),
                           );
                         },

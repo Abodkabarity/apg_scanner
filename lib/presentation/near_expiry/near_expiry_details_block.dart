@@ -1,9 +1,11 @@
-import 'package:apg_scanner/core/app_color/app_color.dart';
 import 'package:apg_scanner/data/model/project_model.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../core/app_color/app_color.dart';
+import '../stock_taking/widgets/submit_button.dart';
 import '../widgets/top_snackbar.dart';
 import 'near_expiry_bloc/near_expiry_bloc.dart';
 import 'near_expiry_bloc/near_expiry_event.dart';
@@ -46,11 +48,11 @@ class NearExpiryDetailsBlock extends StatelessWidget {
         final expiryOptions = state.nearExpiryOptions;
 
         return Container(
-          margin: const EdgeInsets.all(8),
-          padding: const EdgeInsets.all(16),
+          margin: EdgeInsets.all(8),
+          padding: EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(15.r),
+            color: const Color(0x1a4eb0de),
           ),
           child: Column(
             children: [
@@ -59,84 +61,174 @@ class NearExpiryDetailsBlock extends StatelessWidget {
                 controller: nameController,
                 readOnly: true,
                 decoration: InputDecoration(
+                  fillColor: Colors.white,
+                  filled: true,
                   labelText: "Item Name",
+                  labelStyle: TextStyle(color: AppColor.secondaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(color: AppColor.primaryColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(color: AppColor.primaryColor),
                   ),
                 ),
               ),
               SizedBox(height: 10.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField2<String>(
+                      value: state.selectedUnit,
+                      isExpanded: true,
+
+                      items: state.units
+                          .map(
+                            (u) => DropdownMenuItem<String>(
+                              value: u,
+                              child: Text(
+                                u,
+                                style: TextStyle(
+                                  color: AppColor.secondaryColor,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+
+                      onChanged: (v) {
+                        if (v != null) {
+                          bloc.add(ChangeUnitEvent(v));
+                        }
+                      },
+
+                      dropdownStyleData: DropdownStyleData(
+                        width: 160.w,
+                        maxHeight: 220.h,
+                        elevation: 6,
+                        offset: const Offset(0, -5),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12.r),
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      menuItemStyleData: MenuItemStyleData(
+                        height: 42.h,
+                        padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      ),
+
+                      decoration: InputDecoration(
+                        labelText: "Unit Type",
+                        filled: true,
+                        fillColor: Colors.white,
+                        labelStyle: TextStyle(color: AppColor.secondaryColor),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(color: AppColor.primaryColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(color: AppColor.primaryColor),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: TextField(
+                      controller: qtyController,
+                      focusNode: qtyFocusNode,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: "Quantity",
+                        fillColor: Colors.white,
+                        filled: true,
+                        labelStyle: TextStyle(color: AppColor.secondaryColor),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(color: AppColor.primaryColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(color: AppColor.primaryColor),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
               // ---------------- Unit ----------------
-              DropdownButtonFormField<String>(
-                initialValue: state.selectedUnit,
-                items: state.units
-                    .map(
-                      (u) => DropdownMenuItem<String>(value: u, child: Text(u)),
-                    )
-                    .toList(),
-                onChanged: (v) => bloc.add(ChangeUnitEvent(v)),
-                decoration: InputDecoration(
-                  labelText: "Unit",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                ),
-              ),
               SizedBox(height: 10.h),
 
               // ---------------- Near Expiry (MONTH / YEAR) ----------------
-              DropdownButtonFormField<DateTime>(
-                initialValue: state.selectedNearExpiry,
+              DropdownButtonFormField2<DateTime>(
+                value: state.selectedNearExpiry,
+                isExpanded: true,
+
                 items: expiryOptions
                     .map(
                       (d) => DropdownMenuItem<DateTime>(
                         value: d,
-                        child: Text(_formatMonthYear(d)),
+                        child: Text(
+                          _formatMonthYear(d),
+                          style: TextStyle(color: AppColor.secondaryColor),
+                        ),
                       ),
                     )
                     .toList(),
+
                 onChanged: expiryOptions.isEmpty
                     ? null
                     : (v) {
-                        if (v == null) return;
-                        bloc.add(ChangeNearExpiryDateEvent(v));
+                        if (v != null) {
+                          bloc.add(ChangeNearExpiryDateEvent(v));
+                        }
                       },
+
+                dropdownStyleData: DropdownStyleData(
+                  width: 180.w,
+                  maxHeight: 250.h,
+                  elevation: 6,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.r),
+                    color: Colors.white,
+                  ),
+                  offset: const Offset(0, -2),
+                ),
+
+                menuItemStyleData: MenuItemStyleData(
+                  height: 45.h,
+                  padding: EdgeInsets.symmetric(horizontal: 12.w),
+                ),
+
                 decoration: InputDecoration(
                   labelText: "Near Expiry (MM/YYYY)",
+                  filled: true,
+                  fillColor: Colors.white,
+                  labelStyle: TextStyle(color: AppColor.secondaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(color: AppColor.primaryColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(color: AppColor.primaryColor),
                   ),
                 ),
               ),
-              SizedBox(height: 10.h),
 
-              // ---------------- Quantity ----------------
-              TextField(
-                controller: qtyController,
-                focusNode: qtyFocusNode,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: "Quantity",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                ),
-              ),
-              SizedBox(height: 14.h),
+              SizedBox(height: 15.h),
 
               // ---------------- Save ----------------
               SizedBox(
-                width: double.infinity,
-                height: 48.h,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColor.primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14.r),
-                      side: BorderSide(color: AppColor.secondaryColor),
-                    ),
-                  ),
+                width: 250.w,
+                height: 40.h,
+                child: SubmitButton(
+                  label: "Approve",
+                  icon: Icons.done,
                   onPressed: state.loading
                       ? null
                       : () {
@@ -196,14 +288,6 @@ class NearExpiryDetailsBlock extends StatelessWidget {
                             ),
                           );
                         },
-                  child: Text(
-                    "Save",
-                    style: TextStyle(
-                      color: AppColor.secondaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16.sp,
-                    ),
-                  ),
                 ),
               ),
             ],

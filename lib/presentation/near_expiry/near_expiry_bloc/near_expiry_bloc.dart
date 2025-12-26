@@ -60,10 +60,21 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     on<EditSingleUnitFromListEvent>((event, emit) async {
       await productsRepo.ensureLoaded();
 
-      final product = productsRepo.products.firstWhere(
-        (p) => p.itemCode == event.group.itemCode,
-        orElse: () => throw Exception("Product not found"),
-      );
+      final matching = productsRepo.products
+          .where((p) => p.itemCode == event.group.itemCode)
+          .toList();
+
+      if (matching.isEmpty) {
+        emit(
+          state.copyWith(
+            error: "Product not found in master data",
+            success: null,
+          ),
+        );
+        return;
+      }
+
+      final product = matching.first;
 
       emit(
         state.copyWith(
@@ -72,8 +83,42 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
           selectedUnit: event.unit,
           editingRowId: event.rowId,
           duplicateAction: NearDuplicateAction.edit,
-          success: null,
+
+          editingUnitQty: Map<String, int>.from(event.group.unitQty),
+          editingNearExpiry: event.group.nearExpiry,
+
           error: null,
+          success: null,
+        ),
+      );
+    });
+
+    on<UpdateEditingUnitQtyEvent>((event, emit) {
+      final Map<String, int> base = Map<String, int>.from(
+        state.editingUnitQty.isNotEmpty
+            ? state.editingUnitQty
+            : state.groupedItems
+                  .firstWhere((g) => g.unitQty.containsKey(event.unit))
+                  .unitQty,
+      );
+
+      if (event.qty <= 0) {
+        base[event.unit] = 0;
+      } else {
+        base[event.unit] = event.qty;
+      }
+
+      emit(state.copyWith(editingUnitQty: base));
+    });
+
+    on<UpdateEditingNearExpiryEvent>((event, emit) {
+      emit(
+        state.copyWith(
+          editingNearExpiry: DateTime(
+            event.nearExpiry.year,
+            event.nearExpiry.month,
+            1,
+          ),
         ),
       );
     });
@@ -96,8 +141,6 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     return List.generate(8, (i) => DateTime(start.year, start.month + i, 1));
   }
 
-  DateTime _normalizeMonth(DateTime d) => DateTime(d.year, d.month, 1);
-
   // ---------------------------------------------------------------------------
   Future<void> _onLoad(
     LoadNearExpiryEvent event,
@@ -114,10 +157,6 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     final groups = _groupItemsByItemCodeAndExpiry(visibleItems);
 
     final options = _generateNearExpiryMonths();
-
-    final selected = state.selectedNearExpiry != null
-        ? _normalizeMonth(state.selectedNearExpiry!)
-        : options.first;
 
     emit(
       state.copyWith(
@@ -315,52 +354,101 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     List<NearExpiryItemModel> items,
   ) {
     final visibleItems = items.where((e) => !e.isDeleted).toList();
+
     final Map<String, List<NearExpiryItemModel>> map = {};
 
     for (final it in visibleItems) {
       final key =
           '${it.itemCode}__${it.nearExpiry.year}-${it.nearExpiry.month}-${it.nearExpiry.day}';
+
       map.putIfAbsent(key, () => []);
       map[key]!.add(it);
     }
 
     final groups = <StockItemGroup>[];
 
+    // --------------------------------------------------
     for (final entry in map.entries) {
       final rows = entry.value;
 
       DateTime latestCreatedAt = rows.first.createdAt;
-      final unitQty = <String, int>{};
-      final unitId = <String, String>{};
+
+      final Map<String, int> unitQty = {};
+      final Map<String, String> unitId = {};
 
       for (final r in rows) {
         if (r.createdAt.isAfter(latestCreatedAt)) {
           latestCreatedAt = r.createdAt;
         }
+
         unitQty[r.unitType] = r.quantity;
         unitId[r.unitType] = r.id;
       }
 
+      final bool isEditingGroup =
+          state.editingRowId != null &&
+          rows.any((r) => r.id == state.editingRowId);
+
+      final Map<String, int> effectiveUnitQty = isEditingGroup
+          ? state.editingUnitQty
+          : unitQty;
+
+      final DateTime effectiveNearExpiry =
+          isEditingGroup && state.editingNearExpiry != null
+          ? DateTime(
+              state.editingNearExpiry!.year,
+              state.editingNearExpiry!.month,
+              1,
+            )
+          : rows.first.nearExpiry;
+
+      double totalSubQty = 0;
+
+      for (final entry in effectiveUnitQty.entries) {
+        final unit = entry.key;
+        final qty = entry.value;
+
+        if (qty <= 0) continue;
+
+        if (unit.toLowerCase() == 'box') {
+          totalSubQty += qty.toDouble();
+        } else {
+          final product = productsRepo.products.firstWhere(
+            (p) => p.itemCode == rows.first.itemCode,
+          );
+
+          final subUnitCount = product.numberSubUnit;
+          if (subUnitCount > 0) {
+            totalSubQty += qty / subUnitCount;
+          } else {
+            totalSubQty += qty.toDouble();
+          }
+        }
+      }
+
+      // --------------------------------------------------
       groups.add(
         StockItemGroup(
           itemCode: rows.first.itemCode,
           itemName: rows.first.itemName,
           barcode: rows.first.barcode,
 
-          nearExpiry: rows.first.nearExpiry,
+          nearExpiry: effectiveNearExpiry,
 
-          totalSubQty: rows.fold<double>(
+          totalSubQty: totalSubQty,
+          totalDisplayQty: effectiveUnitQty.values.fold<int>(
             0,
-            (s, e) => s + e.quantity.toDouble(),
+            (s, e) => s + e,
           ),
-          totalDisplayQty: rows.fold<int>(0, (s, e) => s + e.quantity),
-          unitQty: unitQty,
+
+          unitQty: Map<String, int>.from(effectiveUnitQty),
           unitId: unitId,
           latestCreatedAt: latestCreatedAt,
         ),
       );
     }
 
+    // --------------------------------------------------
     groups.sort((a, b) => b.latestCreatedAt.compareTo(a.latestCreatedAt));
     return groups;
   }
@@ -471,49 +559,137 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     UploadNearExpiryEvent event,
     Emitter<NearExpiryState> emit,
   ) async {
-    emit(state.copyWith(isUploading: true));
-
-    await repo.uploadNearExpiryItems(
-      projectId: event.projectId,
-      items: state.items,
-    );
-
-    final List<NearExpiryItemModel> syncedItems = state.items.map((item) {
-      return item.copyWith(isSynced: true);
-    }).toList();
-
     emit(
       state.copyWith(
-        isUploading: false,
-        success: "Uploaded successfully",
-        items: syncedItems,
+        isUploading: true,
+        uploadMessage: "Uploading data...",
+        error: null,
+        success: null,
       ),
     );
+
+    try {
+      if (state.items.isEmpty) {
+        emit(
+          state.copyWith(
+            isUploading: false,
+            error: "No items to upload",
+            uploadMessage: null,
+          ),
+        );
+        return;
+      }
+
+      await repo.uploadNearExpiryItems(
+        projectId: event.projectId,
+        items: state.items,
+      );
+
+      final syncedItems = state.items.map((item) {
+        return item.copyWith(isSynced: true);
+      }).toList();
+
+      emit(
+        state.copyWith(
+          isUploading: false,
+          uploadMessage: null,
+          success: "Uploaded successfully",
+          items: syncedItems,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isUploading: false,
+          uploadMessage: null,
+          error: e.toString(),
+        ),
+      );
+    }
   }
 
   Future<void> _onExportExcel(
     ExportExcelEvent event,
     Emitter<NearExpiryState> emit,
   ) async {
-    await repo.exportExcel(
-      projectId: event.projectId,
-      projectName: event.projectName,
+    emit(
+      state.copyWith(
+        isProcessing: true,
+        processingMessage: "Saving file to device...",
+        error: null,
+        success: null,
+      ),
     );
+
+    try {
+      await repo.exportExcel(
+        projectId: event.projectId,
+        projectName: event.projectName,
+      );
+
+      emit(
+        state.copyWith(
+          isProcessing: false,
+          clearProcessingMessage: true,
+          success: "File saved successfully",
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isProcessing: false,
+          clearProcessingMessage: true,
+          error: e.toString(),
+        ),
+      );
+    }
   }
 
   Future<void> _onSendByEmail(
     SendByEmailEvent event,
     Emitter<NearExpiryState> emit,
   ) async {
-    final branchRepo = getIt<BranchRepository>();
-    final exportService = getIt<NearExpiryExportService>();
-    final email = await branchRepo.getEmailByBranchName(event.branchName);
-
-    await exportService.sendExcelByEmail(
-      projectId: event.projectId,
-      projectName: event.projectName,
-      toEmail: email!,
+    emit(
+      state.copyWith(
+        isProcessing: true,
+        processingMessage: "Sending email...",
+        error: null,
+        success: null,
+      ),
     );
+
+    try {
+      final branchRepo = getIt<BranchRepository>();
+      final exportService = getIt<NearExpiryExportService>();
+
+      final email = await branchRepo.getEmailByBranchName(event.branchName);
+
+      if (email == null || email.isEmpty) {
+        throw Exception("Branch email not found");
+      }
+
+      await exportService.sendExcelByEmail(
+        projectId: event.projectId,
+        projectName: event.projectName,
+        toEmail: email,
+      );
+
+      emit(
+        state.copyWith(
+          isProcessing: false,
+          clearProcessingMessage: true,
+          success: "Email sent to $email",
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isProcessing: false,
+          clearProcessingMessage: true,
+          error: e.toString(),
+        ),
+      );
+    }
   }
 
   Future<void> _onUpdateMultiUnit(
@@ -521,29 +697,63 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     Emitter<NearExpiryState> emit,
   ) async {
     emit(
-      state.copyWith(isProcessing: true, processingMessage: "Updating item"),
+      state.copyWith(isProcessing: true, processingMessage: "Updating item..."),
     );
+
+    final oldExpiry = DateTime(
+      event.group.nearExpiry!.year,
+      event.group.nearExpiry!.month,
+      1,
+    );
+
+    final newExpiry = DateTime(
+      event.newNearExpiry.year,
+      event.newNearExpiry.month,
+      1,
+    );
+
+    final bool expiryChanged = oldExpiry != newExpiry;
+
+    if (expiryChanged) {
+      for (final id in event.group.unitId.values) {
+        await repo.delete(id);
+      }
+    }
 
     for (final entry in event.newUnitQty.entries) {
       final unit = entry.key;
       final qty = entry.value;
 
-      final rowId = event.group.unitId[unit];
-      if (rowId == null) continue;
+      final existingId = event.group.unitId[unit];
 
-      final item = state.items.firstWhere(
-        (e) => e.id == rowId,
-        orElse: () => throw Exception("Item not found"),
-      );
+      if (qty <= 0) {
+        if (existingId != null) {
+          await repo.delete(existingId);
+        }
+        continue;
+      }
 
-      await repo.updateItemQtyAndExpiry(
-        item: item,
-        qty: qty,
-        nearExpiry: event.newNearExpiry,
-      );
+      if (!expiryChanged && existingId != null) {
+        final item = state.items.firstWhere((e) => e.id == existingId);
+
+        await repo.updateItemQty(item: item, qty: qty);
+      } else {
+        final product = productsRepo.products.firstWhere(
+          (p) => p.itemCode == event.group.itemCode,
+        );
+
+        await repo.saveNewItem(
+          projectId: event.projectId,
+          projectName: event.projectName,
+          barcode: event.group.barcode,
+          product: product,
+          qty: qty,
+          unitType: unit,
+          nearExpiry: newExpiry,
+        );
+      }
     }
 
-    /// 🔁 reload items
     final items = await repo.loadItems(event.projectId);
     final visibleItems = items.where((e) => !e.isDeleted).toList();
     final groups = _groupItemsByItemCodeAndExpiry(visibleItems);
@@ -558,6 +768,10 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
         filteredGroupedItems: groups,
         success: "Item updated successfully",
         error: null,
+
+        editingUnitQty: const {},
+        clearEditingNearExpiry: true,
+        clearEditingRowId: true,
       ),
     );
   }
