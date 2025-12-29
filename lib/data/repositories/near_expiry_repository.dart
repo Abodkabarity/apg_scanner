@@ -1,3 +1,5 @@
+import 'package:apg_scanner/data/repositories/products_repository.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/session/user_session.dart';
@@ -12,8 +14,31 @@ class NearExpiryRepository {
   final NearExpiryLocalService local;
   final NearExpiryRemoteService remote;
   final UserSession session;
+  final ProductsRepository productsRepo;
 
-  NearExpiryRepository(this.local, this.remote, this.session);
+  double _toBoxQty({
+    required int qty,
+    required String unitType,
+    required ProductModel product,
+  }) {
+    if (unitType.toUpperCase() == 'BOX') {
+      return qty.toDouble();
+    }
+
+    final subUnitCount = product.numberSubUnit;
+    if (subUnitCount <= 0) {
+      return qty.toDouble();
+    }
+
+    return qty / subUnitCount;
+  }
+
+  NearExpiryRepository(
+    this.local,
+    this.remote,
+    this.session,
+    this.productsRepo,
+  );
 
   // ---------------------------------------------------------------------------
   // Load
@@ -168,9 +193,6 @@ class NearExpiryRepository {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Export Excel
-  // ---------------------------------------------------------------------------
   Future<void> exportExcel({
     required String projectId,
     required String projectName,
@@ -183,16 +205,49 @@ class NearExpiryRepository {
       throw Exception("No items to export");
     }
 
-    final data = items.map((e) {
-      return {
-        'branch': e.branchName,
-        'item_code': e.itemCode,
-        'item_name': e.itemName,
-        'unit_type': e.unitType,
-        'quantity': e.quantity,
-        'near_expiry': e.nearExpiry.toIso8601String().split('T').first,
-      };
-    }).toList();
+    await productsRepo.ensureLoaded();
+
+    final Map<String, double> totalBoxByKey = {};
+    final Map<String, NearExpiryItemModel> sampleRow = {};
+
+    for (final item in items) {
+      final expiryMonth = DateTime(
+        item.nearExpiry.year,
+        item.nearExpiry.month,
+        1,
+      );
+
+      final key = '${item.itemCode}__${expiryMonth.year}-${expiryMonth.month}';
+
+      final product = productsRepo.products.firstWhere(
+        (p) => p.itemCode == item.itemCode,
+      );
+
+      final boxQty = _toBoxQty(
+        qty: item.quantity,
+        unitType: item.unitType,
+        product: product,
+      );
+
+      totalBoxByKey[key] = (totalBoxByKey[key] ?? 0) + boxQty;
+      sampleRow.putIfAbsent(key, () => item);
+    }
+
+    final List<Map<String, dynamic>> data = [];
+
+    totalBoxByKey.forEach((key, totalBoxQty) {
+      final base = sampleRow[key]!;
+
+      data.add({
+        'branch': base.branchName,
+        'item_code': base.itemCode,
+        'item_name': base.itemName,
+        'unit_type': 'BOX',
+        'quantity': totalBoxQty,
+        'near_expiry':
+            '${base.nearExpiry.year}-${base.nearExpiry.month.toString().padLeft(2, '0')}',
+      });
+    });
 
     final safeName = projectName
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
@@ -209,32 +264,28 @@ class NearExpiryRepository {
     required String projectName,
     required String toEmail,
   }) async {
-    final items = (await loadItems(
-      projectId,
-    )).where((e) => !e.isDeleted).toList();
+    // ✅ 1) الداتا المدمجة (نفس exportExcel)
+    final data = await buildMergedNearExpiryExcelData(projectId);
 
-    if (items.isEmpty) {
-      throw Exception("No data to send");
-    }
+    // 🧪 DEBUG – ستكشف الحقيقة
+    print('MERGED ROWS COUNT = ${data.length}');
+    print(data);
 
-    final data = items.map((e) {
-      return {
-        'branch': e.branchName,
-        'item_code': e.itemCode,
-        'item_name': e.itemName,
-        'unit_type': e.unitType,
-        'quantity': e.quantity,
-        'near_expiry': e.nearExpiry.toIso8601String().split('T').first,
-      };
-    }).toList();
+    // ✅ 2) بناء Excel مرة واحدة
+    final bytes = await ExcelExporter.buildNearExpiryExcelBytes(data);
 
-    final safeName = projectName
-        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
-        .trim();
-
-    await ExcelExporter.saveNearExpiryExcel(
-      data,
-      fileName: 'near_expiry_$safeName.xlsx',
+    // ✅ 3) إرسال نفس الملف
+    await Share.shareXFiles(
+      [
+        XFile.fromData(
+          bytes,
+          name: 'near_expiry_$projectName.xlsx',
+          mimeType:
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ),
+      ],
+      subject: 'Near Expiry - $projectName',
+      text: 'Please find attached near expiry report.',
     );
   }
 
@@ -251,5 +302,65 @@ class NearExpiryRepository {
     );
 
     await local.saveOrUpdate(updated);
+  }
+
+  Future<void> uploadNearExpiryPayload(
+    List<Map<String, dynamic>> payload,
+  ) async {
+    await supabase.from("near_expiry_items").insert(payload);
+  }
+
+  Future<List<Map<String, dynamic>>> buildMergedNearExpiryExcelData(
+    String projectId,
+  ) async {
+    final items = (await loadItems(
+      projectId,
+    )).where((e) => !e.isDeleted).toList();
+
+    await productsRepo.ensureLoaded();
+
+    final Map<String, double> totalBoxByKey = {};
+    final Map<String, NearExpiryItemModel> sampleRow = {};
+
+    for (final item in items) {
+      final expiryMonth = DateTime(
+        item.nearExpiry.year,
+        item.nearExpiry.month,
+        1,
+      );
+
+      final key = '${item.itemCode}__${expiryMonth.year}-${expiryMonth.month}';
+
+      final product = productsRepo.products.firstWhere(
+        (p) => p.itemCode == item.itemCode,
+      );
+
+      final boxQty = _toBoxQty(
+        qty: item.quantity,
+        unitType: item.unitType,
+        product: product,
+      );
+
+      totalBoxByKey[key] = (totalBoxByKey[key] ?? 0) + boxQty;
+      sampleRow.putIfAbsent(key, () => item);
+    }
+
+    final List<Map<String, dynamic>> data = [];
+
+    totalBoxByKey.forEach((key, totalBoxQty) {
+      final base = sampleRow[key]!;
+
+      data.add({
+        'branch': base.branchName,
+        'item_code': base.itemCode,
+        'item_name': base.itemName,
+        'unit_type': 'BOX',
+        'quantity': totalBoxQty,
+        'near_expiry':
+            '${base.nearExpiry.year}-${base.nearExpiry.month.toString().padLeft(2, '0')}',
+      });
+    });
+
+    return data;
   }
 }

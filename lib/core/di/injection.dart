@@ -76,6 +76,7 @@ void setupGetIt() {
       getIt<NearExpiryLocalService>(),
       getIt<NearExpiryRemoteService>(),
       getIt<UserSession>(),
+      getIt<ProductsRepository>(),
     ),
   );
 

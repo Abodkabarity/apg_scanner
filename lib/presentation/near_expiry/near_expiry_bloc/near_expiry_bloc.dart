@@ -6,6 +6,8 @@ import '../../../../data/model/stock_item_group.dart';
 import '../../../../data/repositories/branch_repository.dart';
 import '../../../../data/repositories/near_expiry_repository.dart';
 import '../../../../data/repositories/products_repository.dart';
+import '../../../core/session/user_session.dart';
+import '../../../data/model/products_model.dart';
 import '../../../data/services/near_expiry_export_service.dart';
 import 'near_expiry_event.dart';
 import 'near_expiry_state.dart';
@@ -94,18 +96,23 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     });
 
     on<UpdateEditingUnitQtyEvent>((event, emit) {
-      final Map<String, int> base = Map<String, int>.from(
-        state.editingUnitQty.isNotEmpty
-            ? state.editingUnitQty
-            : state.groupedItems
-                  .firstWhere((g) => g.unitQty.containsKey(event.unit))
-                  .unitQty,
-      );
+      final Map<String, int> base = {};
 
-      if (event.qty <= 0) {
-        base[event.unit] = 0;
+      if (state.editingUnitQty.isEmpty) {
+        final group = state.groupedItems.firstWhere(
+          (g) => g.unitQty.containsKey(event.unit),
+          orElse: () => state.groupedItems.first,
+        );
+
+        base.addAll(group.unitQty);
       } else {
+        base.addAll(state.editingUnitQty);
+      }
+
+      if (event.qty > 0) {
         base[event.unit] = event.qty;
+      } else {
+        base[event.unit] = 0;
       }
 
       emit(state.copyWith(editingUnitQty: base));
@@ -134,11 +141,33 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
       emit(state.copyWith(productExistsDialogShown: true));
     });
   }
+  final session = getIt<UserSession>();
+
   List<DateTime> _generateNearExpiryMonths() {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month + 2, 1);
 
     return List.generate(8, (i) => DateTime(start.year, start.month + i, 1));
+  }
+
+  double _toBoxQtyLocal({
+    required int qty,
+    required String unitType,
+    required ProductModel product,
+  }) {
+    final unit = unitType.trim().toUpperCase();
+
+    if (unit == 'BOX') {
+      return qty.toDouble();
+    }
+
+    final num subUnitCount = product.numberSubUnit;
+
+    if (subUnitCount <= 0) {
+      return qty.toDouble();
+    }
+
+    return qty / subUnitCount;
   }
 
   // ---------------------------------------------------------------------------
@@ -349,7 +378,6 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     );
   }
 
-  // ---------------------------------------------------------------------------
   List<StockItemGroup> _groupItemsByItemCodeAndExpiry(
     List<NearExpiryItemModel> items,
   ) {
@@ -389,8 +417,13 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
           state.editingRowId != null &&
           rows.any((r) => r.id == state.editingRowId);
 
+      /// ✅ هنا التعديل المهم
+      /// ندمج القيم الأصلية مع القيم المعدلة
       final Map<String, int> effectiveUnitQty = isEditingGroup
-          ? state.editingUnitQty
+          ? {
+              ...unitQty, // الأصل
+              ...state.editingUnitQty, // التعديل
+            }
           : unitQty;
 
       final DateTime effectiveNearExpiry =
@@ -580,14 +613,64 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
         return;
       }
 
-      await repo.uploadNearExpiryItems(
-        projectId: event.projectId,
-        items: state.items,
-      );
+      await productsRepo.ensureLoaded();
 
-      final syncedItems = state.items.map((item) {
-        return item.copyWith(isSynced: true);
-      }).toList();
+      final Map<String, double> totalBoxByKey = {};
+      final Map<String, NearExpiryItemModel> sampleRow = {};
+
+      for (final item in state.items.where((e) => !e.isDeleted)) {
+        final expiryMonth = DateTime(
+          item.nearExpiry.year,
+          item.nearExpiry.month,
+          1,
+        );
+
+        final key =
+            '${item.itemCode}__${expiryMonth.year}-${expiryMonth.month}';
+
+        final product = productsRepo.products.firstWhere(
+          (p) => p.itemCode == item.itemCode,
+        );
+
+        final double boxQty = _toBoxQtyLocal(
+          qty: item.quantity,
+          unitType: item.unitType,
+          product: product,
+        );
+
+        totalBoxByKey[key] = (totalBoxByKey[key] ?? 0) + boxQty;
+        sampleRow.putIfAbsent(key, () => item);
+      }
+
+      final List<Map<String, dynamic>> payload = [];
+
+      totalBoxByKey.forEach((key, totalBoxQty) {
+        final base = sampleRow[key]!;
+
+        payload.add({
+          'project_id': event.projectId,
+          'project_name': base.projectName,
+          'item_code': base.itemCode,
+          'item_name': base.itemName,
+          'barcode': base.barcode,
+          'branch_name': session.branch,
+          'near_expiry': DateTime(
+            base.nearExpiry.year,
+            base.nearExpiry.month,
+            1,
+          ).toIso8601String(),
+
+          'qty': totalBoxQty,
+
+          'unit_type': 'BOX',
+        });
+      });
+
+      await repo.uploadNearExpiryPayload(payload);
+
+      final syncedItems = state.items
+          .map((item) => item.copyWith(isSynced: true))
+          .toList();
 
       emit(
         state.copyWith(
