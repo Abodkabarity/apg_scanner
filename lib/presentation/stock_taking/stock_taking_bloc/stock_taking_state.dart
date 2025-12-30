@@ -15,6 +15,7 @@ class StockState extends Equatable {
   final String? error;
   final String? success;
   final String? editingRowId;
+  final String? scannedBarcode;
 
   final List<StockItemModel> filteredItems;
   final int? selectedIndex;
@@ -55,6 +56,7 @@ class StockState extends Equatable {
     this.duplicateAction = DuplicateAction.edit,
     this.subUnit = 1,
     this.editingRowId,
+    this.scannedBarcode,
   });
   bool get hasUnsyncedItems => items.any((e) => !e.isSynced);
 
@@ -66,6 +68,8 @@ class StockState extends Equatable {
     List<String>? units,
     String? selectedUnit,
     bool? isUploading,
+    String? scannedBarcode,
+
     bool? isProcessing,
     String? processingMessage,
     bool clearProcessingMessage = false,
@@ -113,6 +117,8 @@ class StockState extends Equatable {
       isUploading: isUploading ?? this.isUploading,
       uploadMessage: uploadMessage ?? this.uploadMessage,
       success: success,
+      scannedBarcode: scannedBarcode ?? this.scannedBarcode,
+
       duplicateAction: duplicateAction ?? this.duplicateAction,
       subUnit: subUnit ?? this.subUnit,
       groupedItems: groupedItems ?? this.groupedItems,
@@ -149,5 +155,6 @@ class StockState extends Equatable {
     groupedItems,
     filteredGroupedItems,
     editingRowId,
+    scannedBarcode,
   ];
 }

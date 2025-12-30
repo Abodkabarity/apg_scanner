@@ -229,14 +229,20 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     ScanBarcodeEvent event,
     Emitter<NearExpiryState> emit,
   ) async {
-    emit(state.copyWith(loading: true, error: null));
+    emit(state.copyWith(loading: true, error: null, scannedBarcode: null));
 
     await productsRepo.ensureLoaded();
 
     final product = productsRepo.findByBarcode(event.barcode);
 
     if (product == null) {
-      emit(state.copyWith(loading: false, error: "Item not found"));
+      emit(
+        state.copyWith(
+          loading: false,
+          error: "Item not found",
+          scannedBarcode: null, // لا نخزن الباركود
+        ),
+      );
       return;
     }
 
@@ -269,6 +275,8 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
         error: null,
         productExistsDialogShown: false,
         suggestions: [],
+
+        scannedBarcode: event.barcode,
       ),
     );
   }
@@ -386,8 +394,8 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     final Map<String, List<NearExpiryItemModel>> map = {};
 
     for (final it in visibleItems) {
-      final key =
-          '${it.itemCode}__${it.nearExpiry.year}-${it.nearExpiry.month}-${it.nearExpiry.day}';
+      final expiryMonth = DateTime(it.nearExpiry.year, it.nearExpiry.month);
+      final key = '${it.itemCode}__${expiryMonth.year}-${expiryMonth.month}';
 
       map.putIfAbsent(key, () => []);
       map[key]!.add(it);
@@ -417,13 +425,8 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
           state.editingRowId != null &&
           rows.any((r) => r.id == state.editingRowId);
 
-      /// ✅ هنا التعديل المهم
-      /// ندمج القيم الأصلية مع القيم المعدلة
       final Map<String, int> effectiveUnitQty = isEditingGroup
-          ? {
-              ...unitQty, // الأصل
-              ...state.editingUnitQty, // التعديل
-            }
+          ? {...unitQty, ...state.editingUnitQty}
           : unitQty;
 
       final DateTime effectiveNearExpiry =

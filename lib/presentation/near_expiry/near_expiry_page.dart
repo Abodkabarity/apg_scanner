@@ -179,6 +179,15 @@ class NearExpiryPage extends StatelessWidget {
             );
           },
         ),
+        BlocListener<NearExpiryBloc, NearExpiryState>(
+          listenWhen: (prev, curr) =>
+              prev.scannedBarcode != curr.scannedBarcode,
+          listener: (context, state) {
+            if (state.scannedBarcode != null) {
+              scanController.text = state.scannedBarcode!;
+            }
+          },
+        ),
       ],
       child: BlocBuilder<NearExpiryBloc, NearExpiryState>(
         builder: (context, state) {
@@ -466,8 +475,6 @@ class NearExpiryPage extends StatelessWidget {
                                           );
 
                                           if (barcode != null) {
-                                            scanController.text = barcode;
-
                                             bloc.add(
                                               ScanBarcodeEvent(
                                                 projectId: projects.id,

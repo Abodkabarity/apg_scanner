@@ -164,6 +164,15 @@ class StockTakingPage extends StatelessWidget {
             );
           },
         ),
+        BlocListener<StockBloc, StockState>(
+          listenWhen: (prev, curr) =>
+              prev.scannedBarcode != curr.scannedBarcode,
+          listener: (context, state) {
+            if (state.scannedBarcode != null) {
+              scanController.text = state.scannedBarcode!;
+            }
+          },
+        ),
       ],
       child: BlocBuilder<StockBloc, StockState>(
         builder: (context, state) {
@@ -441,8 +450,6 @@ class StockTakingPage extends StatelessWidget {
                                           );
 
                                           if (barcode != null) {
-                                            scanController.text = barcode;
-
                                             bloc.add(
                                               ScanBarcodeEvent(
                                                 projectId: projects.id,

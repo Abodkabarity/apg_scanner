@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../core/di/injection.dart';
+import '../../data/services/products_sync_service.dart';
 import '../widgets/top_snackbar.dart';
 import 'login_block/login_state.dart';
 
@@ -32,6 +34,8 @@ class LoginPage extends StatelessWidget {
               );
             }
             if (state.status == LoginStatus.success) {
+              getIt<ProductsSyncService>().initialSync();
+
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => const AuthGate()),

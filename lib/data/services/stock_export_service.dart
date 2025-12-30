@@ -15,12 +15,13 @@ class StockExportService {
   Future<void> exportAndSaveExcel(String projectId) async {
     final data = await repo.fetchUploadedItems(projectId);
 
-    final saved = await ExcelExporter.saveStockTakingExcel(
+    final saved = await ExcelExporter.saveExcelWithSystemPicker(
       data,
       fileName: 'StockTaking_$projectId.xlsx',
     );
 
     if (!saved) {
+      // المستخدم ضغط Cancel
       return;
     }
   }
@@ -29,7 +30,7 @@ class StockExportService {
   Future<void> exportAndShareExcel(String projectId) async {
     final data = await repo.fetchUploadedItems(projectId);
 
-    final bytes = await ExcelExporter.buildStockTakingExcelBytes(data);
+    final bytes = await ExcelExporter.buildExcelBytes(data);
 
     await SharePlus.instance.share(
       ShareParams(
@@ -61,7 +62,7 @@ class StockExportService {
     final safeName = projectName
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
         .trim();
-    final bytes = await ExcelExporter.buildStockTakingExcelBytes(data);
+    final bytes = await ExcelExporter.buildExcelBytes(data);
     final fileBase64 = base64Encode(bytes);
 
     final response = await Supabase.instance.client.functions.invoke(

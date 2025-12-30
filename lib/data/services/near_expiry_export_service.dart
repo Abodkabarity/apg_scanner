@@ -11,29 +11,16 @@ class NearExpiryExportService {
 
   NearExpiryExportService(this.repo);
 
-  /// ✅ Save Excel (System Save Dialog)
+  /// ✅ Save Excel (System Save Dialog) - MERGED
   Future<void> exportAndSaveExcel({
     required String projectId,
     required String projectName,
   }) async {
-    final items = (await repo.loadItems(
-      projectId,
-    )).where((e) => !e.isDeleted).toList();
+    final data = await repo.buildMergedNearExpiryExcelData(projectId);
 
-    if (items.isEmpty) {
+    if (data.isEmpty) {
       throw Exception('No data to export');
     }
-
-    final data = items.map((e) {
-      return {
-        'branch': e.branchName,
-        'item_code': e.itemCode,
-        'item_name': e.itemName,
-        'unit_type': e.unitType,
-        'quantity': e.quantity,
-        'near_expiry': e.nearExpiry.toIso8601String().split('T').first,
-      };
-    }).toList();
 
     final safeName = projectName
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
@@ -45,29 +32,16 @@ class NearExpiryExportService {
     );
   }
 
-  /// ✅ Share Excel (system share)
+  /// ✅ Share Excel (system share) - MERGED
   Future<void> exportAndShareExcel({
     required String projectId,
     required String projectName,
   }) async {
-    final items = (await repo.loadItems(
-      projectId,
-    )).where((e) => !e.isDeleted).toList();
+    final data = await repo.buildMergedNearExpiryExcelData(projectId);
 
-    if (items.isEmpty) {
+    if (data.isEmpty) {
       throw Exception('No data to share');
     }
-
-    final data = items.map((e) {
-      return {
-        'branch': e.branchName,
-        'item_code': e.itemCode,
-        'item_name': e.itemName,
-        'unit_type': e.unitType,
-        'quantity': e.quantity,
-        'near_expiry': e.nearExpiry.toIso8601String().split('T').first,
-      };
-    }).toList();
 
     final bytes = await ExcelExporter.buildNearExpiryExcelBytes(data);
 
@@ -87,30 +61,17 @@ class NearExpiryExportService {
     );
   }
 
-  /// ✅ Send Excel via Email (Supabase Function)
+  /// ✅ Send Excel via Email (Supabase Function) - MERGED
   Future<void> sendExcelByEmail({
     required String projectId,
     required String projectName,
     required String toEmail,
   }) async {
-    final items = (await repo.loadItems(
-      projectId,
-    )).where((e) => !e.isDeleted).toList();
+    final data = await repo.buildMergedNearExpiryExcelData(projectId);
 
-    if (items.isEmpty) {
+    if (data.isEmpty) {
       throw Exception('No data to send');
     }
-
-    final data = items.map((e) {
-      return {
-        'branch': e.branchName,
-        'item_code': e.itemCode,
-        'item_name': e.itemName,
-        'unit_type': e.unitType,
-        'quantity': e.quantity,
-        'near_expiry': e.nearExpiry.toIso8601String().split('T').first,
-      };
-    }).toList();
 
     final bytes = await ExcelExporter.buildNearExpiryExcelBytes(data);
     final fileBase64 = base64Encode(bytes);

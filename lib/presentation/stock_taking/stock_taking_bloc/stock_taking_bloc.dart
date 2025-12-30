@@ -118,19 +118,25 @@ class StockBloc extends Bloc<StockEvent, StockState> {
   }
 
   Future<void> _onScan(ScanBarcodeEvent event, Emitter<StockState> emit) async {
-    emit(state.copyWith(loading: true, error: null));
+    emit(state.copyWith(loading: true, error: null, scannedBarcode: null));
 
     await productsRepo.ensureLoaded();
 
     final product = productsRepo.findByBarcode(event.barcode);
 
     if (product == null) {
-      emit(state.copyWith(loading: false, error: "Item not found"));
+      emit(
+        state.copyWith(
+          loading: false,
+          error: "Item not found",
+          scannedBarcode: null,
+        ),
+      );
       return;
     }
 
+    // 🔁 Check if item already exists
     StockItemModel? existingItem;
-
     try {
       existingItem = state.items
           .where((e) => !e.isDeleted)
@@ -142,6 +148,8 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     } catch (_) {
       existingItem = null;
     }
+
+    // 📦 Load units
     final units = productsRepo.getUnitsForProduct(product);
 
     final String? defaultUnit = units.any((u) => u.toLowerCase() == 'box')
@@ -161,6 +169,8 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         error: null,
         productExistsDialogShown: false,
         suggestions: [],
+
+        scannedBarcode: event.barcode,
       ),
     );
   }
@@ -299,69 +309,6 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     );
   }
 
-  /*
-  Future<void> _onApprove(
-    ApproveItemEvent event,
-    Emitter<StockState> emit,
-  ) async {
-    final product = state.currentProduct;
-
-    if (product == null) {
-      emit(state.copyWith(error: "Scan product first"));
-      return;
-    }
-
-    if (event.qty <= 0) {
-      emit(state.copyWith(error: "Quantity required"));
-      return;
-    }
-
-    if (event.unit.isEmpty) {
-      emit(state.copyWith(error: "Unit type required"));
-      return;
-    }
-
-    final existing = await repo.findExistingItem(
-      event.projectId,
-      product.itemCode,
-    );
-
-    if (existing != null) {
-      await repo.updateItem(
-        item: existing,
-        qty: event.qty,
-        unit: event.unit,
-        product: product,
-      );
-    } else {
-      await repo.saveNewItem(
-        projectId: event.projectId,
-        barcode: event.barcode,
-        product: product,
-        qty: event.qty,
-        unit: event.unit,
-      );
-    }
-
-    final items = await repo.loadItems(event.projectId);
-
-    emit(
-      state.copyWith(
-        items: items,
-        currentProduct: null,
-        units: [],
-        setNullSelectedUnit: true,
-        selectedUnit: null,
-        filteredItems: items,
-        success: "Item saved successfully",
-        error: null,
-        suggestions: [],
-        productAlreadyExists: false,
-        productExistsDialogShown: false,
-      ),
-    );
-  }
-*/
   Future<void> _onDelete(
     DeleteStockEvent event,
     Emitter<StockState> emit,

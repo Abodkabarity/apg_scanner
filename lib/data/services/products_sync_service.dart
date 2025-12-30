@@ -13,9 +13,6 @@ class ProductsSyncService {
 
   ProductsSyncService(this.repo, this.client);
 
-  /// ======================================================
-  /// INITIAL SYNC (SMART: LOCAL → DELTA → REALTIME)
-  /// ======================================================
   Future<void> initialSync() async {
     print("INITIAL SYNC STARTED");
 

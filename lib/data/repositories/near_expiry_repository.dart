@@ -1,5 +1,4 @@
 import 'package:apg_scanner/data/repositories/products_repository.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/session/user_session.dart';
@@ -253,39 +252,9 @@ class NearExpiryRepository {
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
         .trim();
 
-    await ExcelExporter.saveNearExpiryExcel(
+    await ExcelExporter.saveExcelWithSystemPicker(
       data,
       fileName: 'near_expiry_$safeName.xlsx',
-    );
-  }
-
-  Future<void> sendExcelByEmail({
-    required String projectId,
-    required String projectName,
-    required String toEmail,
-  }) async {
-    // ✅ 1) الداتا المدمجة (نفس exportExcel)
-    final data = await buildMergedNearExpiryExcelData(projectId);
-
-    // 🧪 DEBUG – ستكشف الحقيقة
-    print('MERGED ROWS COUNT = ${data.length}');
-    print(data);
-
-    // ✅ 2) بناء Excel مرة واحدة
-    final bytes = await ExcelExporter.buildNearExpiryExcelBytes(data);
-
-    // ✅ 3) إرسال نفس الملف
-    await Share.shareXFiles(
-      [
-        XFile.fromData(
-          bytes,
-          name: 'near_expiry_$projectName.xlsx',
-          mimeType:
-              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ),
-      ],
-      subject: 'Near Expiry - $projectName',
-      text: 'Please find attached near expiry report.',
     );
   }
 
