@@ -74,8 +74,13 @@ class ProductsRepository {
     for (final p in _products) {
       final Set<String> units = {};
 
+      units.add('Box');
+
       if (p.unit.isNotEmpty) {
-        units.add(_normalizeUnit(p.unit));
+        final u = _normalizeUnit(p.unit);
+        if (u.toLowerCase() != 'box') {
+          units.add(u);
+        }
       }
 
       if (p.subUnit.isNotEmpty) {
@@ -84,6 +89,7 @@ class ProductsRepository {
 
       unitIndex[p.itemCode] = units.toList();
     }
+
     print("Unit Index Built → ${unitIndex.length} products");
   }
 
@@ -122,10 +128,12 @@ class ProductsRepository {
     final map = {for (var p in _products) p.id: p};
 
     for (var u in updates) {
-      map[u.id] = u; // Replace or insert
+      map[u.id] = u;
     }
 
     _products = map.values.toList();
+
+    _buildUnitIndex();
   }
 
   void setProducts(List<ProductModel> list) {

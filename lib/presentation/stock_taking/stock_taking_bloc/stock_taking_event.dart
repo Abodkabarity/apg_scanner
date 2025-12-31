@@ -151,3 +151,5 @@ class EditSingleUnitFromListEvent extends StockEvent {
     required this.qty,
   });
 }
+
+class ProductsRepoUpdatedEvent extends StockEvent {}

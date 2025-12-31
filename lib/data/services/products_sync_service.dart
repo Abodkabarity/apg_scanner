@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/di/injection.dart';
+import '../../presentation/stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
+import '../../presentation/stock_taking/stock_taking_bloc/stock_taking_event.dart';
 import '../model/products_model.dart';
 import '../repositories/products_repository.dart';
 
@@ -10,10 +13,17 @@ class ProductsSyncService {
   final SupabaseClient client;
 
   RealtimeChannel? _subscription;
+  bool _started = false;
 
   ProductsSyncService(this.repo, this.client);
 
+  // ======================================================
+  // INITIAL SYNC
+  // ======================================================
   Future<void> initialSync() async {
+    if (_started) return;
+    _started = true;
+
     print("INITIAL SYNC STARTED");
 
     // 1) Load local Hive data
@@ -28,12 +38,16 @@ class ProductsSyncService {
       await fullSync();
     }
 
+    // 🔔 Notify UI that products are ready
+    _notifyProductsUpdated();
+
+    // 🔌 Start realtime listener
     subscribeRealtime();
   }
 
-  /// ======================================================
-  /// FULL SYNC (FIRST RUN ONLY)
-  /// ======================================================
+  // ======================================================
+  // FULL SYNC (FIRST RUN)
+  // ======================================================
   Future<void> fullSync() async {
     print("START FULL SYNC...");
 
@@ -45,22 +59,21 @@ class ProductsSyncService {
     print("FULL SYNC COMPLETED: ${remoteProducts.length} products");
   }
 
-  /// ======================================================
-  /// DELTA SYNC (UPDATED ITEMS ONLY)
-  /// ======================================================
+  // ======================================================
+  // DELTA SYNC
+  // ======================================================
   Future<void> syncDelta() async {
     if (repo.products.isEmpty) return;
 
-    // Get last updated time
     repo.products.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     final lastUpdated = repo.products.first.updatedAt;
 
     print("⏱ Last updated at: $lastUpdated");
 
     final response = await client
-        .from("products")
+        .from('products')
         .select()
-        .gt("updated_at", lastUpdated.toIso8601String());
+        .gt('updated_at', lastUpdated.toIso8601String());
 
     if (response.isEmpty) {
       print("No delta updates.");
@@ -72,17 +85,14 @@ class ProductsSyncService {
     final updates = response.map((e) => ProductModel.fromJson(e)).toList();
 
     repo.mergeUpdatedProducts(updates);
-
     await repo.local.saveProducts(repo.products);
 
-    print(
-      "💾 Hive saved updated products, new total = ${repo.products.length}",
-    );
+    print("💾 Hive updated (delta), total = ${repo.products.length}");
   }
 
-  /// ======================================================
-  /// PAGINATION FETCH (20K+ ITEMS)
-  /// ======================================================
+  // ======================================================
+  // PAGINATION FETCH
+  // ======================================================
   Future<List<ProductModel>> fetchAllPaged() async {
     print("START PAGINATION FETCH...");
 
@@ -100,9 +110,7 @@ class ProductsSyncService {
 
       if (batch.isEmpty) break;
 
-      final mapped = batch.map((e) => ProductModel.fromJson(e)).toList();
-
-      all.addAll(mapped);
+      all.addAll(batch.map((e) => ProductModel.fromJson(e)).toList());
 
       print("Loaded: ${all.length}");
 
@@ -114,9 +122,9 @@ class ProductsSyncService {
     return all;
   }
 
-  /// ======================================================
-  /// REALTIME LISTENER
-  /// ======================================================
+  // ======================================================
+  // REALTIME LISTENER (FINAL FIX)
+  // ======================================================
   void subscribeRealtime() {
     _subscription?.unsubscribe();
 
@@ -129,16 +137,36 @@ class ProductsSyncService {
       schema: 'public',
       table: 'products',
       callback: (payload) async {
-        print("REALTIME UPDATE: ${payload.eventType}");
+        try {
+          print("REALTIME UPDATE: ${payload.eventType}");
 
-        final data = payload.newRecord;
+          final record = payload.newRecord;
+          if (record.isEmpty) return;
 
-        final product = ProductModel.fromJson(Map<String, dynamic>.from(data));
+          final productId = record['id'];
+          if (productId == null) return;
 
-        repo.mergeUpdatedProducts([product]);
-        await repo.local.saveProducts(repo.products);
+          // 🔥 IMPORTANT:
+          // Re-fetch FULL product (Realtime payload is NOT reliable)
+          final full = await client
+              .from('products')
+              .select()
+              .eq('id', productId)
+              .single();
 
-        print("✔ LOCAL PRODUCT UPDATED via REALTIME");
+          final product = ProductModel.fromJson(
+            Map<String, dynamic>.from(full),
+          );
+
+          repo.mergeUpdatedProducts([product]);
+          await repo.local.saveProducts(repo.products);
+
+          _notifyProductsUpdated();
+
+          print("✔ FULL PRODUCT UPDATED via REALTIME");
+        } catch (e) {
+          print("❌ REALTIME ERROR: $e");
+        }
       },
     );
 
@@ -148,6 +176,18 @@ class ProductsSyncService {
     print("REALTIME SYNC ACTIVATED");
   }
 
+  // ======================================================
+  // NOTIFY UI
+  // ======================================================
+  void _notifyProductsUpdated() {
+    if (getIt.isRegistered<StockBloc>()) {
+      getIt<StockBloc>().add(ProductsRepoUpdatedEvent());
+    }
+  }
+
+  // ======================================================
+  // CLEANUP
+  // ======================================================
   void dispose() {
     _subscription?.unsubscribe();
   }

@@ -88,6 +88,30 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     on<MarkProductExistsDialogShownEvent>((event, emit) {
       emit(state.copyWith(productExistsDialogShown: true));
     });
+    on<ProductsRepoUpdatedEvent>((event, emit) async {
+      final current = state.currentProduct;
+      if (current == null) return;
+
+      final updatedProduct = productsRepo.products.firstWhere(
+        (p) => p.itemCode == current.itemCode,
+        orElse: () => current,
+      );
+
+      final units = productsRepo.getUnitsForProduct(updatedProduct);
+
+      emit(
+        state.copyWith(
+          currentProduct: updatedProduct,
+          units: units,
+          selectedUnit: units.contains(state.selectedUnit)
+              ? state.selectedUnit
+              : (units.any((u) => u.toLowerCase() == 'box')
+                    ? units.firstWhere((u) => u.toLowerCase() == 'box')
+                    : null),
+          setNullSelectedUnit: units.isEmpty,
+        ),
+      );
+    });
   }
   bool isMultiUnit(List<String> units) {
     return units.length > 1;
