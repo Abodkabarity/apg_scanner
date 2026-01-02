@@ -99,7 +99,7 @@ class ExcelExporter {
         TextCellValue(row['item_code']?.toString() ?? ''),
         TextCellValue(row['item_name']?.toString() ?? ''),
         TextCellValue(row['unit_type']?.toString() ?? 'BOX'),
-        TextCellValue(row['quantity']?.toString() ?? '0'),
+        TextCellValue(row['qty']?.toString() ?? '0'),
         TextCellValue(row['near_expiry']?.toString() ?? ''),
       ]);
     }

@@ -286,9 +286,9 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     ApproveItemEvent event,
     Emitter<NearExpiryState> emit,
   ) async {
-    final product = state.currentProduct;
+    final productFromState = state.currentProduct;
 
-    if (product == null) {
+    if (productFromState == null) {
       emit(state.copyWith(error: "Scan product first"));
       return;
     }
@@ -302,6 +302,11 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
       emit(state.copyWith(error: "Unit type required"));
       return;
     }
+
+    final ProductModel product = productsRepo.products.firstWhere(
+      (p) => p.id == productFromState.id,
+      orElse: () => productFromState,
+    );
 
     final expiry = event.nearExpiry;
 
@@ -708,7 +713,9 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     );
 
     try {
-      await repo.exportExcel(
+      final exportService = getIt<NearExpiryExportService>();
+
+      await exportService.exportAndSaveExcel(
         projectId: event.projectId,
         projectName: event.projectName,
       );

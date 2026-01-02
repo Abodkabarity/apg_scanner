@@ -158,36 +158,67 @@ class NearExpiryRepository {
       throw Exception("Branch not found in session");
     }
 
-    final modifiedItems = items.where((item) {
-      return !item.isSynced || item.isDeleted;
-    }).toList();
-
-    if (modifiedItems.isEmpty) {
-      throw Exception("No modified items to upload");
+    final validItems = items.where((e) => !e.isDeleted).toList();
+    if (validItems.isEmpty) {
+      throw Exception("No items to upload");
     }
 
-    final payload = modifiedItems
-        .map(
-          (e) => {
-            "id": e.id,
-            "project_id": e.projectId,
-            "project_name": e.projectName,
-            "branch_name": branchName,
-            "barcode": e.barcode,
-            "item_code": e.itemCode,
-            "item_name": e.itemName,
-            "unit_type": e.unitType,
-            "qty": e.quantity,
-            "near_expiry": e.nearExpiry.toIso8601String(),
-            "is_deleted": e.isDeleted,
-            "updated_at": DateTime.now().toIso8601String(),
-          },
-        )
-        .toList();
+    await productsRepo.ensureLoaded();
 
-    await supabase.from("near_expiry_items").upsert(payload, onConflict: 'id');
+    final Map<String, double> totalBoxByKey = {};
+    final Map<String, NearExpiryItemModel> sampleRow = {};
 
-    for (final item in modifiedItems) {
+    for (final item in validItems) {
+      final expiryMonth = DateTime(
+        item.nearExpiry.year,
+        item.nearExpiry.month,
+        1,
+      );
+
+      final key = '${item.itemCode}__${expiryMonth.year}-${expiryMonth.month}';
+
+      final product = productsRepo.products.firstWhere(
+        (p) => p.itemCode == item.itemCode,
+      );
+
+      final boxQty = _toBoxQty(
+        qty: item.quantity,
+        unitType: item.unitType,
+        product: product,
+      );
+
+      totalBoxByKey[key] = (totalBoxByKey[key] ?? 0) + boxQty;
+      sampleRow.putIfAbsent(key, () => item);
+    }
+
+    final payload = totalBoxByKey.entries.map((e) {
+      final base = sampleRow[e.key]!;
+
+      return {
+        "project_id": base.projectId,
+        "project_name": base.projectName,
+        "branch_name": branchName,
+        "barcode": base.barcode,
+        "item_code": base.itemCode,
+        "item_name": base.itemName,
+
+        "unit_type": "BOX",
+        "qty": e.value,
+
+        "near_expiry": DateTime(
+          base.nearExpiry.year,
+          base.nearExpiry.month,
+          1,
+        ).toIso8601String(),
+
+        "is_deleted": false,
+        "updated_at": DateTime.now().toIso8601String(),
+      };
+    }).toList();
+
+    await supabase.from("near_expiry_items").insert(payload);
+
+    for (final item in validItems) {
       await local.saveOrUpdate(item.copyWith(isSynced: true));
     }
   }
@@ -242,7 +273,7 @@ class NearExpiryRepository {
         'item_code': base.itemCode,
         'item_name': base.itemName,
         'unit_type': 'BOX',
-        'quantity': totalBoxQty,
+        'qty': totalBoxQty,
         'near_expiry':
             '${base.nearExpiry.year}-${base.nearExpiry.month.toString().padLeft(2, '0')}',
       });
@@ -324,7 +355,7 @@ class NearExpiryRepository {
         'item_code': base.itemCode,
         'item_name': base.itemName,
         'unit_type': 'BOX',
-        'quantity': totalBoxQty,
+        'qty': totalBoxQty,
         'near_expiry':
             '${base.nearExpiry.year}-${base.nearExpiry.month.toString().padLeft(2, '0')}',
       });
