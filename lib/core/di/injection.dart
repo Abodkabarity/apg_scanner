@@ -3,10 +3,12 @@ import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/remote/near_expiry_remote_service.dart';
+import '../../data/remote/product_unit_remote_service.dart';
 import '../../data/remote/products_remote_service.dart';
 import '../../data/remote/stock_remote_service.dart';
 import '../../data/repositories/branch_repository.dart';
 import '../../data/repositories/near_expiry_repository.dart';
+import '../../data/repositories/product_unit_repository.dart';
 import '../../data/repositories/products_repository.dart';
 import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
@@ -14,6 +16,7 @@ import '../../data/services/connectivity_service.dart';
 import '../../data/services/local_storage_service.dart';
 import '../../data/services/near_expiry_export_service.dart';
 import '../../data/services/near_expiry_local_service.dart';
+import '../../data/services/product_unit_local_service.dart';
 import '../../data/services/products_local_service.dart';
 import '../../data/services/products_sync_service.dart';
 import '../../data/services/stock_export_service.dart';
@@ -21,6 +24,8 @@ import '../../data/services/stock_local_service.dart';
 import '../../data/services/supabase_service.dart';
 import '../../presentation/add_project/project_bloc/project_bloc.dart';
 import '../../presentation/login_page/login_block/login_bloc.dart';
+import '../../presentation/near_expiry/near_expiry_bloc/near_expiry_bloc.dart';
+import '../../presentation/near_expiry/near_expiry_bloc/near_expiry_event.dart';
 import '../../presentation/stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
 import '../session/user_session.dart';
 
@@ -105,9 +110,28 @@ void setupGetIt() {
   getIt.registerLazySingleton(
     () => NearExpiryExportService(getIt<NearExpiryRepository>()),
   );
+  getIt.registerLazySingleton(() => ProductUnitLocalService());
+  getIt.registerLazySingleton(
+    () => ProductUnitRemoteService(Supabase.instance.client),
+  );
+
+  getIt.registerLazySingleton(
+    () => ProductUnitRepository(
+      local: getIt<ProductUnitLocalService>(),
+      remote: getIt<ProductUnitRemoteService>(),
+      session: getIt<UserSession>(),
+    ),
+  );
 
   getIt.registerLazySingleton(
     () => StockExportService(getIt<StockRepository>()),
   );
+  if (getIt.isRegistered<NearExpiryBloc>()) {
+    getIt<NearExpiryBloc>().add(ProductsRepoUpdatedNearEvent());
+  }
+  /*if (getIt.isRegistered<StockBloc>()) {
+    getIt<StockBloc>().add(ProductsRepoRevisionEvent());
+  }*/
+
   getIt.registerLazySingleton(() => BranchRepository(Supabase.instance.client));
 }

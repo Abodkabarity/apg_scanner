@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/injection.dart';
+import '../../../data/model/products_model.dart';
 import '../../../data/model/stock_item_group.dart';
 import '../../../data/model/stock_taking_model.dart';
 import '../../../data/repositories/branch_repository.dart';
@@ -14,8 +17,13 @@ import 'stock_taking_state.dart';
 class StockBloc extends Bloc<StockEvent, StockState> {
   final StockRepository repo;
   final ProductsRepository productsRepo;
+  late final StreamSubscription<int> _productsSub;
 
   StockBloc(this.repo, this.productsRepo) : super(const StockState()) {
+    // 🔥 LISTEN TO PRODUCTS REPO CHANGES
+    _productsSub = productsRepo.revisionStream.listen((_) {
+      add(ProductsRepoRevisionEvent());
+    });
     on<LoadStockEvent>(_onLoad);
     on<ScanBarcodeEvent>(_onScan);
     on<DeleteStockEvent>(_onDelete);
@@ -33,6 +41,28 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     on<ExportExcelEvent>(_onExportExcel);
 
     on<UploadStockEvent>(_onUploadStock);
+    on<ProductsRepoRevisionEvent>((event, emit) async {
+      await productsRepo.ensureLoaded();
+
+      ProductModel? refreshedProduct;
+      List<String> refreshedUnits = state.units;
+
+      if (state.currentProduct != null) {
+        refreshedProduct = productsRepo.products.firstWhere(
+          (p) => p.itemCode == state.currentProduct!.itemCode,
+          orElse: () => state.currentProduct!,
+        );
+        refreshedUnits = productsRepo.getUnitsForProduct(refreshedProduct);
+      }
+
+      emit(
+        state.copyWith(
+          currentProduct: refreshedProduct,
+          units: refreshedUnits,
+          productsRevision: state.productsRevision + 1,
+        ),
+      );
+    });
 
     on<ChangeUnitEvent>((event, emit) {
       emit(state.copyWith(selectedUnit: event.unit));
@@ -60,18 +90,38 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     on<EditSingleUnitFromListEvent>((event, emit) async {
       await productsRepo.ensureLoaded();
 
+      // 🔹 المنتج
       final product = productsRepo.products.firstWhere(
         (p) => p.itemCode == event.group.itemCode,
         orElse: () => throw Exception("Product not found"),
       );
 
+      // 🔹 الصف الحقيقي من التخزين (المصدر الصحيح)
+      final row = state.items.firstWhere(
+        (e) => e.id == event.rowId,
+        orElse: () => throw Exception("Stock row not found"),
+      );
+
+      // 🔹 تحويل subQuantity → quantity للعرض فقط
+      int displayQty;
+      if (row.unit.toLowerCase() == 'box') {
+        displayQty = row.subQuantity.round();
+      } else if (product.numberSubUnit > 0) {
+        displayQty = (row.subQuantity * product.numberSubUnit).round();
+      } else {
+        displayQty = row.subQuantity.round();
+      }
+
       emit(
         state.copyWith(
           currentProduct: product,
           units: productsRepo.getUnitsForProduct(product),
-          selectedUnit: event.unit,
+          selectedUnit: row.unit,
           setNullSelectedUnit: false,
-          editingRowId: event.rowId,
+
+          editingUnitQty: {row.unit: displayQty},
+
+          editingRowId: row.id,
           duplicateAction: DuplicateAction.edit,
           success: null,
           error: null,
@@ -88,7 +138,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
     on<MarkProductExistsDialogShownEvent>((event, emit) {
       emit(state.copyWith(productExistsDialogShown: true));
     });
-    on<ProductsRepoUpdatedEvent>((event, emit) async {
+    on<RefreshCurrentProductEvent>((event, emit) async {
       final current = state.currentProduct;
       if (current == null) return;
 
@@ -712,66 +762,62 @@ class StockBloc extends Bloc<StockEvent, StockState> {
 
     final groups = <StockItemGroup>[];
 
+    // --------------------------------------------------
     for (final entry in map.entries) {
       final rows = entry.value;
 
-      final itemCode = rows.first.itemCode;
-      final itemName = rows.first.itemName;
-      final barcode = rows.first.barcode;
-
-      final product = productsRepo.products.firstWhere(
-        (p) => p.itemCode == itemCode,
-        orElse: () =>
-            throw Exception("Product not found for grouping: $itemCode"),
-      );
-
-      int qtyFromSub(String unit, double subQty) {
-        if (unit.toLowerCase() == 'box') {
-          return subQty.round();
-        }
-
-        if (product.numberSubUnit <= 0) {
-          return subQty.round();
-        }
-
-        return (subQty * product.numberSubUnit).round();
-      }
-
-      double totalSubQty = 0;
       DateTime latestCreatedAt = rows.first.createdAt;
 
-      final unitQty = <String, int>{};
-      final unitId = <String, String>{};
+      final Map<String, int> unitQty = {};
+      final Map<String, String> unitId = {};
+
+      double totalSubQty = 0;
+
+      final product = productsRepo.products.firstWhere(
+        (p) => p.itemCode == rows.first.itemCode,
+      );
 
       for (final r in rows) {
-        final subQty = r.subQuantity.toDouble();
-        totalSubQty += subQty;
-
         if (r.createdAt.isAfter(latestCreatedAt)) {
           latestCreatedAt = r.createdAt;
         }
 
-        final qty = qtyFromSub(r.unit, subQty);
-        unitQty[r.unit] = qty;
+        final subQty = r.subQuantity;
+        totalSubQty += subQty;
+
+        // ✅ تحويل عكسي للعرض فقط (مثل Near)
+        if (r.unit.toLowerCase() == 'box') {
+          unitQty[r.unit] = subQty.round();
+        } else if (product.numberSubUnit > 0) {
+          unitQty[r.unit] = (subQty * product.numberSubUnit).round();
+        } else {
+          unitQty[r.unit] = subQty.round();
+        }
+
         unitId[r.unit] = r.id;
       }
 
+      // --------------------------------------------------
       groups.add(
         StockItemGroup(
-          itemCode: itemCode,
-          itemName: itemName,
-          barcode: barcode,
+          itemCode: rows.first.itemCode,
+          itemName: rows.first.itemName,
+          barcode: rows.first.barcode,
+
           totalSubQty: totalSubQty,
+
+          // نفس Near
+          totalDisplayQty: unitQty.values.fold<int>(0, (s, e) => s + e),
+
           unitQty: unitQty,
-          totalDisplayQty: totalSubQty.round(),
           unitId: unitId,
           latestCreatedAt: latestCreatedAt,
         ),
       );
     }
 
+    // --------------------------------------------------
     groups.sort((a, b) => b.latestCreatedAt.compareTo(a.latestCreatedAt));
-
     return groups;
   }
 
@@ -781,17 +827,30 @@ class StockBloc extends Bloc<StockEvent, StockState> {
   ) async {
     await productsRepo.ensureLoaded();
 
+    // 🔹 المنتج
     final product = productsRepo.products.firstWhere(
       (p) => p.itemCode == event.group.itemCode,
       orElse: () => throw Exception("Product not found"),
     );
 
-    double subFromQty(String unit, int qty) {
-      if (unit.toLowerCase() == 'box') return qty.toDouble();
-      if (product.numberSubUnit <= 0) return qty.toDouble();
-      return qty / product.numberSubUnit;
+    // 🔹 التحويل الصحيح: qty → subQuantity (Base Unit)
+    double subFromQty({
+      required String unit,
+      required int qty,
+      required int numberSubUnit,
+    }) {
+      if (unit.toLowerCase() == 'box') {
+        return qty.toDouble();
+      }
+
+      if (numberSubUnit <= 0) {
+        return qty.toDouble();
+      }
+
+      return qty / numberSubUnit;
     }
 
+    // --------------------------------------------------
     for (final entry in event.newUnitQty.entries) {
       final unit = entry.key;
       final qty = entry.value;
@@ -805,10 +864,15 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         continue;
       }
 
-      final subQty = subFromQty(unit, qty);
+      final subQty = subFromQty(
+        unit: unit,
+        qty: qty,
+        numberSubUnit: product.numberSubUnit.toInt(),
+      );
 
       if (existingRowId != null) {
         final row = state.items.firstWhere((e) => e.id == existingRowId);
+
         await repo.updateItemFull(item: row, unit: unit, subQty: subQty);
       } else {
         await repo.saveNewItem(
@@ -821,6 +885,8 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         );
       }
     }
+
+    // --------------------------------------------------
     if (event.newUnitQty.isEmpty) {
       for (final rowId in event.group.unitId.values) {
         await repo.delete(rowId);
@@ -842,6 +908,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
       return;
     }
 
+    // --------------------------------------------------
     final items = await repo.loadItems(event.projectId);
     final groups = _groupItemsByItemCode(items);
 
@@ -855,5 +922,11 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         error: null,
       ),
     );
+  }
+
+  @override
+  Future<void> close() {
+    _productsSub.cancel();
+    return super.close();
   }
 }

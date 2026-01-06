@@ -163,3 +163,5 @@ class UpdateEditingNearExpiryEvent extends NearExpiryEvent {
   final DateTime nearExpiry;
   const UpdateEditingNearExpiryEvent(this.nearExpiry);
 }
+
+class ProductsRepoUpdatedNearEvent extends NearExpiryEvent {}

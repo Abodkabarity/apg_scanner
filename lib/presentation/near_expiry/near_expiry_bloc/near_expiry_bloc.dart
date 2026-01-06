@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/injection.dart';
@@ -15,9 +17,14 @@ import 'near_expiry_state.dart';
 class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
   final NearExpiryRepository repo;
   final ProductsRepository productsRepo;
+  late final StreamSubscription<int> _productsSub;
 
   NearExpiryBloc(this.repo, this.productsRepo)
     : super(const NearExpiryState()) {
+    //  LISTEN TO PRODUCTS CHANGES
+    _productsSub = productsRepo.revisionStream.listen((_) {
+      add(ProductsRepoUpdatedNearEvent());
+    });
     on<LoadNearExpiryEvent>(_onLoad);
     on<ScanBarcodeEvent>(_onScan);
     on<DeleteNearExpiryEvent>(_onDelete);
@@ -27,6 +34,7 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
     on<ChangeSelectedIndexEvent>((event, emit) {
       emit(state.copyWith(selectedIndex: event.index));
     });
+    on<ProductsRepoUpdatedNearEvent>(_onProductsRepoUpdated);
 
     on<ClearProductAlreadyExistsFlagEvent>((event, emit) {
       emit(state.copyWith(productAlreadyExists: false));
@@ -867,5 +875,45 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
         clearEditingRowId: true,
       ),
     );
+  }
+
+  Future<void> _onProductsRepoUpdated(
+    ProductsRepoUpdatedNearEvent event,
+    Emitter<NearExpiryState> emit,
+  ) async {
+    await productsRepo.ensureLoaded();
+
+    ProductModel? refreshedProduct;
+    List<String> refreshedUnits = state.units;
+
+    if (state.currentProduct != null) {
+      refreshedProduct = productsRepo.products.firstWhere(
+        (p) => p.id == state.currentProduct!.id,
+        orElse: () => state.currentProduct!,
+      );
+
+      refreshedUnits = productsRepo.getUnitsForProduct(refreshedProduct);
+    }
+
+    final visible = state.items.where((e) => !e.isDeleted).toList();
+    final groups = _groupItemsByItemCodeAndExpiry(visible);
+
+    emit(
+      state.copyWith(
+        currentProduct: refreshedProduct,
+        units: refreshedUnits,
+
+        groupedItems: List.from(groups),
+        filteredGroupedItems: List.from(groups),
+
+        productsRevision: state.productsRevision + 1,
+      ),
+    );
+  }
+
+  @override
+  Future<void> close() {
+    _productsSub.cancel();
+    return super.close();
   }
 }

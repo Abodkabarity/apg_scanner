@@ -16,6 +16,8 @@ class StockState extends Equatable {
   final String? success;
   final String? editingRowId;
   final String? scannedBarcode;
+  final int productsRevision;
+  final Map<String, int> editingUnitQty;
 
   final List<StockItemModel> filteredItems;
   final int? selectedIndex;
@@ -39,9 +41,12 @@ class StockState extends Equatable {
     this.currentProduct,
     this.isProcessing = false,
     this.processingMessage,
+    this.editingUnitQty = const {},
+
     this.units = const [],
     this.selectedUnit,
     this.error,
+    this.productsRevision = 0,
 
     this.success,
     this.suggestions = const [],
@@ -69,6 +74,7 @@ class StockState extends Equatable {
     String? selectedUnit,
     bool? isUploading,
     String? scannedBarcode,
+    int? productsRevision,
 
     bool? isProcessing,
     String? processingMessage,
@@ -83,6 +89,7 @@ class StockState extends Equatable {
     double? subUnit,
     String? editingRowId,
     bool clearEditingRowId = false,
+    Map<String, int>? editingUnitQty,
 
     List<StockItemGroup>? groupedItems,
     List<StockItemGroup>? filteredGroupedItems,
@@ -99,6 +106,7 @@ class StockState extends Equatable {
       currentProduct: setNullProduct
           ? null
           : (currentProduct ?? this.currentProduct),
+      editingUnitQty: editingUnitQty ?? this.editingUnitQty,
 
       units: units ?? this.units,
       selectedUnit: setNullSelectedUnit
@@ -127,6 +135,7 @@ class StockState extends Equatable {
       editingRowId: clearEditingRowId
           ? null
           : (editingRowId ?? this.editingRowId),
+      productsRevision: productsRevision ?? this.productsRevision,
 
       productExistsDialogShown:
           productExistsDialogShown ?? this.productExistsDialogShown,
@@ -156,5 +165,7 @@ class StockState extends Equatable {
     filteredGroupedItems,
     editingRowId,
     scannedBarcode,
+    productsRevision,
+    editingUnitQty,
   ];
 }

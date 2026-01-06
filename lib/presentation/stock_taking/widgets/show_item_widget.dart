@@ -49,6 +49,8 @@ class ShowItemsList extends StatelessWidget {
               SizedBox(
                 height: 350.h,
                 child: ListView.builder(
+                  key: ValueKey(state.productsRevision),
+
                   itemCount: state.filteredGroupedItems.length,
                   itemBuilder: (context, i) {
                     final group = state.filteredGroupedItems[i];
@@ -75,7 +77,7 @@ class ShowItemsList extends StatelessWidget {
                           ),
                         ),
                         trailing: Text(
-                          "Qty ${group.totalSubQty.toStringAsFixed(2)}",
+                          "Qty ${group.totalSubQty!.toStringAsFixed(2)}",
 
                           style: TextStyle(
                             color: AppColor.secondaryColor,

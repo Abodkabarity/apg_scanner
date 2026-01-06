@@ -152,4 +152,6 @@ class EditSingleUnitFromListEvent extends StockEvent {
   });
 }
 
-class ProductsRepoUpdatedEvent extends StockEvent {}
+class ProductsRepoRevisionEvent extends StockEvent {}
+
+class RefreshCurrentProductEvent extends StockEvent {}

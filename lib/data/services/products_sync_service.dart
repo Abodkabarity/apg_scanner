@@ -2,15 +2,22 @@ import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../core/di/injection.dart';
-import '../../presentation/stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
-import '../../presentation/stock_taking/stock_taking_bloc/stock_taking_event.dart';
 import '../model/products_model.dart';
 import '../repositories/products_repository.dart';
 
 class ProductsSyncService {
   final ProductsRepository repo;
   final SupabaseClient client;
+  final StreamController<void> _productsChanged =
+      StreamController<void>.broadcast();
+
+  Stream<void> get productsChanged => _productsChanged.stream;
+
+  void _notifyChanged() {
+    if (!_productsChanged.isClosed) {
+      _productsChanged.add(null);
+    }
+  }
 
   RealtimeChannel? _subscription;
   bool _started = false;
@@ -39,8 +46,7 @@ class ProductsSyncService {
     }
 
     // 🔔 Notify UI that products are ready
-    _notifyProductsUpdated();
-
+    _notifyChanged;
     // 🔌 Start realtime listener
     subscribeRealtime();
   }
@@ -161,8 +167,7 @@ class ProductsSyncService {
           repo.mergeUpdatedProducts([product]);
           await repo.local.saveProducts(repo.products);
 
-          _notifyProductsUpdated();
-
+          _notifyChanged;
           print("✔ FULL PRODUCT UPDATED via REALTIME");
         } catch (e) {
           print("❌ REALTIME ERROR: $e");
@@ -179,11 +184,6 @@ class ProductsSyncService {
   // ======================================================
   // NOTIFY UI
   // ======================================================
-  void _notifyProductsUpdated() {
-    if (getIt.isRegistered<StockBloc>()) {
-      getIt<StockBloc>().add(ProductsRepoUpdatedEvent());
-    }
-  }
 
   // ======================================================
   // CLEANUP

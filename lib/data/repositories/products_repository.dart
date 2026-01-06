@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../model/products_model.dart';
 import '../remote/products_remote_service.dart';
 import '../services/products_local_service.dart';
@@ -9,19 +11,41 @@ class ProductsRepository {
   List<ProductModel> _products = [];
   Map<String, List<String>> unitIndex = {};
 
+  // =====================================================
+  // 🔔 CHANGE NOTIFIER (VERY IMPORTANT)
+  // =====================================================
+  final StreamController<int> _revisionController =
+      StreamController<int>.broadcast();
+  int _revision = 0;
+
+  Stream<int> get revisionStream => _revisionController.stream;
+
+  void _notifyChanged() {
+    _revision++;
+    _revisionController.add(_revision);
+    print("📢 ProductsRepository changed → revision=$_revision");
+  }
+
+  // =====================================================
   ProductsRepository({required this.local, required this.remote});
 
   List<ProductModel> get products => _products;
 
-  /// Load products from Hive
+  // =====================================================
+  // Load products from Hive
+  // =====================================================
   Future<List<ProductModel>> getAllLocal() async {
     _products = await local.loadProducts();
     print("LOADED LOCAL PRODUCTS = ${_products.length}");
     _buildUnitIndex();
+
+    _notifyChanged(); // ✅ IMPORTANT
     return _products;
   }
 
-  /// Sync from server with pagination
+  // =====================================================
+  // Sync from server with pagination
+  // =====================================================
   Future<void> syncProducts() async {
     print("FETCHING FROM SUPABASE WITH PAGINATION...");
 
@@ -47,19 +71,22 @@ class ProductsRepository {
     await local.saveProducts(remoteList);
     _products = remoteList;
     _buildUnitIndex();
+
+    _notifyChanged(); // ✅ IMPORTANT
     print("SYNC DONE");
   }
 
+  // =====================================================
   Future<void> ensureLoaded() async {
     if (_products.isNotEmpty) {
       print("Products already in memory, skip loading.");
       return;
     }
 
-    // جرّب تحمل من Hive
-    final local = await getAllLocal();
+    // Try load from Hive
+    final localList = await getAllLocal();
 
-    if (local.isNotEmpty) {
+    if (localList.isNotEmpty) {
       print("Using local Hive products.");
       return;
     }
@@ -68,6 +95,7 @@ class ProductsRepository {
     await syncProducts();
   }
 
+  // =====================================================
   void _buildUnitIndex() {
     unitIndex.clear();
 
@@ -93,6 +121,7 @@ class ProductsRepository {
     print("Unit Index Built → ${unitIndex.length} products");
   }
 
+  // =====================================================
   String _normalizeUnit(String u) {
     u = u.trim();
     if (u.isEmpty) return "";
@@ -106,7 +135,9 @@ class ProductsRepository {
     return value[0].toUpperCase() + value.substring(1);
   }
 
-  /// Search product by barcode (Sync lookup)
+  // =====================================================
+  // Search product by barcode
+  // =====================================================
   ProductModel? findByBarcode(String barcode) {
     if (_products.isEmpty) {
       print("WARNING: PRODUCTS LIST IS EMPTY — Did you call ensureLoaded?");
@@ -124,6 +155,7 @@ class ProductsRepository {
     return unitIndex[p.itemCode] ?? [];
   }
 
+  // =====================================================
   void mergeUpdatedProducts(List<ProductModel> updates) {
     final map = {for (var p in _products) p.id: p};
 
@@ -132,12 +164,20 @@ class ProductsRepository {
     }
 
     _products = map.values.toList();
-
     _buildUnitIndex();
+
+    _notifyChanged(); // ✅ IMPORTANT
   }
 
   void setProducts(List<ProductModel> list) {
     _products = list;
     _buildUnitIndex();
+
+    _notifyChanged(); // ✅ IMPORTANT
+  }
+
+  // =====================================================
+  void dispose() {
+    _revisionController.close();
   }
 }

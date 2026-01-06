@@ -19,6 +19,7 @@ class NearExpiryState extends Equatable {
 
   final DateTime? selectedNearExpiry;
   final String? scannedBarcode;
+  final int productsRevision;
 
   final String? error;
   final String? success;
@@ -69,6 +70,7 @@ class NearExpiryState extends Equatable {
     this.editingRowId,
     this.isProcessing = false,
     this.processingMessage,
+    this.productsRevision = 0,
   });
 
   bool get hasUnsyncedItems => items.any((e) => !e.isSynced);
@@ -92,6 +94,7 @@ class NearExpiryState extends Equatable {
 
     DateTime? selectedNearExpiry,
     bool clearSelectedNearExpiry = false,
+    int? productsRevision,
 
     String? error,
     String? success,
@@ -143,6 +146,7 @@ class NearExpiryState extends Equatable {
       editingNearExpiry: clearEditingNearExpiry
           ? null
           : (editingNearExpiry ?? this.editingNearExpiry),
+      productsRevision: productsRevision ?? this.productsRevision,
 
       error: error,
       success: success,
@@ -204,5 +208,6 @@ class NearExpiryState extends Equatable {
     editingRowId,
     editingUnitQty,
     editingNearExpiry,
+    productsRevision,
   ];
 }
