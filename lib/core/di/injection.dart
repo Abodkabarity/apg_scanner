@@ -5,12 +5,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/remote/near_expiry_remote_service.dart';
 import '../../data/remote/product_unit_remote_service.dart';
 import '../../data/remote/products_remote_service.dart';
+import '../../data/remote/products_with_batch_remote_service.dart';
+import '../../data/remote/stock_batch_remote_service.dart';
 import '../../data/remote/stock_remote_service.dart';
 import '../../data/repositories/branch_repository.dart';
 import '../../data/repositories/near_expiry_repository.dart';
 import '../../data/repositories/product_unit_repository.dart';
 import '../../data/repositories/products_repository.dart';
+import '../../data/repositories/products_with_batch_repository.dart';
 import '../../data/repositories/project_repository.dart';
+import '../../data/repositories/stock_batch_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
 import '../../data/services/connectivity_service.dart';
 import '../../data/services/local_storage_service.dart';
@@ -19,6 +23,8 @@ import '../../data/services/near_expiry_local_service.dart';
 import '../../data/services/product_unit_local_service.dart';
 import '../../data/services/products_local_service.dart';
 import '../../data/services/products_sync_service.dart';
+import '../../data/services/products_with_batch_local_service.dart';
+import '../../data/services/stock_batch_local_service.dart';
 import '../../data/services/stock_export_service.dart';
 import '../../data/services/stock_local_service.dart';
 import '../../data/services/supabase_service.dart';
@@ -63,6 +69,26 @@ void setupGetIt() {
       remote: getIt<ProductsRemoteService>(),
     ),
   );
+  // ================= PRODUCTS WITH BATCH =================
+
+  // Local
+  getIt.registerLazySingleton<ProductsWithBatchLocalService>(
+    () => ProductsWithBatchLocalService(),
+  );
+
+  // Remote
+  getIt.registerLazySingleton<ProductsWithBatchRemoteService>(
+    () => ProductsWithBatchRemoteService(Supabase.instance.client),
+  );
+
+  // Repository
+  getIt.registerLazySingleton<ProductsWithBatchRepository>(
+    () => ProductsWithBatchRepository(
+      getIt<ProductsWithBatchLocalService>(),
+      getIt<ProductsWithBatchRemoteService>(),
+    ),
+  );
+
   // ================= NEAR EXPIRY =================
 
   // Local
@@ -82,6 +108,22 @@ void setupGetIt() {
       getIt<NearExpiryRemoteService>(),
       getIt<UserSession>(),
       getIt<ProductsRepository>(),
+    ),
+  );
+  // ================= STOCK BATCH (RESULTS) =================
+  getIt.registerLazySingleton<StockBatchLocalService>(
+    () => StockBatchLocalService(),
+  );
+
+  getIt.registerLazySingleton<StockBatchRemoteService>(
+    () => StockBatchRemoteService(Supabase.instance.client),
+  );
+
+  getIt.registerLazySingleton<StockBatchRepository>(
+    () => StockBatchRepository(
+      getIt<StockBatchLocalService>(),
+      getIt<StockBatchRemoteService>(),
+      getIt<UserSession>(),
     ),
   );
 

@@ -1,4 +1,4 @@
-enum ProjectType { stockTaking, nearExpiry }
+enum ProjectType { stockTaking, nearExpiry, stockBatch }
 
 extension ProjectTypeX on ProjectType {
   String get label {
@@ -7,6 +7,8 @@ extension ProjectTypeX on ProjectType {
         return 'Stock Taking';
       case ProjectType.nearExpiry:
         return 'Near Expiry';
+      case ProjectType.stockBatch:
+        return 'Stock Batch';
     }
   }
 
@@ -16,6 +18,8 @@ extension ProjectTypeX on ProjectType {
         return 'stock_taking';
       case ProjectType.nearExpiry:
         return 'near_expiry';
+      case ProjectType.stockBatch:
+        return 'products_with_batch';
     }
   }
 }

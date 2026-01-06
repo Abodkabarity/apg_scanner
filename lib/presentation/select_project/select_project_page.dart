@@ -169,11 +169,20 @@ class SelectProjectPage extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 50.h),
-                  /*RawMaterialButton(
+
+                  RawMaterialButton(
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => ProductUnitMapPage()),
+                        MaterialPageRoute(
+                          builder: (_) => BlocProvider(
+                            create: (_) => getIt<ProjectBloc>()
+                              ..add(LoadProjectsEvent(ProjectType.stockBatch)),
+                            child: AddProjectPage(
+                              projectType: ProjectType.stockBatch,
+                            ),
+                          ),
+                        ),
                       );
                     },
                     fillColor: AppColor.primaryColor,
@@ -187,14 +196,14 @@ class SelectProjectPage extends StatelessWidget {
                       minHeight: 75.h,
                     ),
                     child: Text(
-                      "Product Units",
+                      "Stock Batch Scan",
                       style: TextStyle(
                         fontSize: 16.sp,
                         color: AppColor.secondaryColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),*/
+                  ),
                 ],
               ),
             ),

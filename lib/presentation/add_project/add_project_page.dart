@@ -15,10 +15,15 @@ import '../../core/constant/project_type.dart';
 import '../../core/di/injection.dart';
 import '../../data/repositories/near_expiry_repository.dart';
 import '../../data/repositories/products_repository.dart';
+import '../../data/repositories/products_with_batch_repository.dart';
+import '../../data/repositories/stock_batch_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
 import '../near_expiry/near_expiry_bloc/near_expiry_bloc.dart';
 import '../near_expiry/near_expiry_bloc/near_expiry_event.dart';
 import '../near_expiry/near_expiry_page.dart';
+import '../stock_batch/stock_batch_bloc/stock_batch_bloc.dart';
+import '../stock_batch/stock_batch_bloc/stock_batch_event.dart';
+import '../stock_batch/stock_batch_page.dart';
 import '../stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
 import '../stock_taking/stock_taking_bloc/stock_taking_event.dart';
 
@@ -33,9 +38,16 @@ class AddProjectPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          projectType == ProjectType.stockTaking
-              ? "Stock Taking Project"
-              : "Near Expiry Project",
+          () {
+            switch (projectType) {
+              case ProjectType.stockTaking:
+                return "Stock Taking Project";
+              case ProjectType.nearExpiry:
+                return "Near Expiry Project";
+              case ProjectType.stockBatch:
+                return "Stock Batch Project";
+            }
+          }(),
           style: TextStyle(
             color: AppColor.secondaryColor,
             fontWeight: FontWeight.bold,
@@ -58,32 +70,51 @@ class AddProjectPage extends StatelessWidget {
           if (state.createSuccess && state.project != null) {
             final project = state.project!;
 
-            if (projectType == ProjectType.stockTaking) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BlocProvider(
-                    create: (_) => StockBloc(
-                      getIt<StockRepository>(),
-                      getIt<ProductsRepository>(),
-                    )..add(LoadStockEvent(project.id.toString())),
-                    child: StockTakingPage(projects: project),
+            switch (projectType) {
+              case ProjectType.stockTaking:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider(
+                      create: (_) => StockBloc(
+                        getIt<StockRepository>(),
+                        getIt<ProductsRepository>(),
+                      )..add(LoadStockEvent(project.id.toString())),
+                      child: StockTakingPage(projects: project),
+                    ),
                   ),
-                ),
-              );
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BlocProvider(
-                    create: (_) => NearExpiryBloc(
-                      getIt<NearExpiryRepository>(),
-                      getIt<ProductsRepository>(),
-                    )..add(LoadNearExpiryEvent(project.id.toString())),
-                    child: NearExpiryPage(projects: project),
+                );
+                break;
+
+              case ProjectType.nearExpiry:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider(
+                      create: (_) => NearExpiryBloc(
+                        getIt<NearExpiryRepository>(),
+                        getIt<ProductsRepository>(),
+                      )..add(LoadNearExpiryEvent(project.id.toString())),
+                      child: NearExpiryPage(projects: project),
+                    ),
                   ),
-                ),
-              );
+                );
+                break;
+
+              case ProjectType.stockBatch:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider(
+                      create: (_) => StockBatchBloc(
+                        getIt<StockBatchRepository>(),
+                        getIt<ProductsWithBatchRepository>(),
+                      )..add(LoadStockBatchEvent(project.id.toString())),
+                      child: StockBatchPage(project: project),
+                    ),
+                  ),
+                );
+                break;
             }
           }
         },

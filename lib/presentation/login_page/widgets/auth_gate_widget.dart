@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/app_color/app_color.dart';
 import '../../../core/di/injection.dart';
 import '../../../core/session/user_session.dart';
+import '../../../data/repositories/products_with_batch_repository.dart';
 import '../../../data/services/connectivity_service.dart';
 import '../../../data/services/products_sync_service.dart';
 import '../../select_project/select_project_page.dart';
@@ -44,7 +45,14 @@ class _AuthGateState extends State<AuthGate> {
       branch: profile['branch_name'],
     );
 
-    getIt<ProductsSyncService>().initialSync();
+    final productsSync = getIt<ProductsSyncService>();
+    final batchRepo = getIt<ProductsWithBatchRepository>();
+
+    await productsSync.initialSync();
+
+    batchRepo.warmUpAfterLogin();
+
+    print('🟢 Session restored – batch preload started');
   }
 
   /// 🔹 Check internet connection

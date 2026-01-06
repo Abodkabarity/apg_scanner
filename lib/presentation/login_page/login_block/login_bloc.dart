@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/injection.dart';
 import '../../../core/session/user_session.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/products_with_batch_repository.dart';
 import '../../../data/repositories/project_repository.dart';
 import '../../../data/services/connectivity_service.dart';
 import '../../../data/services/products_sync_service.dart';
@@ -89,7 +90,13 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       await getIt<ProjectRepository>().loadAllProjects();
 
       final productsSync = getIt<ProductsSyncService>();
+      final batchRepo = getIt<ProductsWithBatchRepository>();
+
       await productsSync.initialSync();
+
+      batchRepo.warmUpAfterLogin();
+
+      print('🟢 Login done – background batch preload started');
 
       /// 3️⃣ All done
       emit(
