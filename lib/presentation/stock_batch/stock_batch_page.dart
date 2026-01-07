@@ -1,4 +1,6 @@
 import 'package:apg_scanner/presentation/stock_batch/widgets/batch_search_results_page.dart';
+import 'package:apg_scanner/presentation/stock_batch/widgets/stock_batch_export_bottom_sheet.dart';
+import 'package:apg_scanner/presentation/stock_batch/widgets/stock_batch_showItems_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -40,10 +42,10 @@ class StockBatchPage extends StatelessWidget {
               backgroundColor: Colors.green,
               icon: Icons.check_circle,
             );
-
-            scanController.clear();
             nameController.clear();
+            scanController.clear();
             qtyController.clear();
+            FocusScope.of(context).unfocus();
 
             context.read<StockBatchBloc>().add(ResetBatchFormEvent());
           },
@@ -73,13 +75,18 @@ class StockBatchPage extends StatelessWidget {
             }
           },
         ),
+        BlocListener<StockBatchBloc, StockBatchState>(
+          listener: (context, state) {
+            if (state.currentProduct != null) {
+              nameController.text = state.currentProduct!.itemName;
+            } else {
+              nameController.clear();
+            }
+          },
+        ),
       ],
       child: BlocBuilder<StockBatchBloc, StockBatchState>(
         builder: (context, state) {
-          if (state.currentProduct != null) {
-            nameController.text = state.currentProduct!.itemName;
-          }
-
           return GestureDetector(
             onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
             child: Scaffold(
@@ -94,6 +101,111 @@ class StockBatchPage extends StatelessWidget {
                 ),
                 centerTitle: true,
                 backgroundColor: AppColor.primaryColor,
+                actions: [
+                  // ---------------- UPLOAD ----------------
+                  BlocBuilder<StockBatchBloc, StockBatchState>(
+                    buildWhen: (p, c) =>
+                        p.hasUnsyncedItems != c.hasUnsyncedItems,
+                    builder: (context, state) {
+                      return IconButton(
+                        icon: Icon(
+                          Icons.cloud_upload,
+                          color: state.hasUnsyncedItems
+                              ? Colors.red.shade700
+                              : AppColor.secondaryColor,
+                        ),
+                        tooltip: state.hasUnsyncedItems
+                            ? "Unsynced changes"
+                            : "All data uploaded",
+                        onPressed: () async {
+                          FocusManager.instance.primaryFocus?.unfocus();
+
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: const Text("Confirm Upload"),
+                              content: const Text(
+                                "Do you want to upload all stock batch items?",
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: const Text(
+                                    "Cancel",
+                                    style: TextStyle(
+                                      color: AppColor.secondaryColor,
+                                    ),
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: const Text(
+                                    "Yes",
+                                    style: TextStyle(
+                                      color: AppColor.secondaryColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true) {
+                            context.read<StockBatchBloc>().add(
+                              UploadStockBatchEvent(
+                                projectId: project.id.toString(),
+                              ),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  ),
+
+                  // ---------------- EXPORT ----------------
+                  BlocBuilder<StockBatchBloc, StockBatchState>(
+                    builder: (context, state) {
+                      final disabled = state.hasUnsyncedItems;
+
+                      return IconButton(
+                        tooltip: disabled
+                            ? "Upload data first"
+                            : "Export Stock Batch report",
+                        icon: Icon(
+                          Icons.download,
+                          color: disabled
+                              ? Colors.grey.shade700
+                              : AppColor.secondaryColor,
+                        ),
+                        onPressed: disabled
+                            ? () {
+                                showTopSnackBar(
+                                  context,
+                                  message:
+                                      "Please upload data before exporting",
+                                  backgroundColor: Colors.orange,
+                                  icon: Icons.cloud_upload,
+                                );
+                              }
+                            : () {
+                                FocusManager.instance.primaryFocus?.unfocus();
+
+                                showModalBottomSheet(
+                                  context: context,
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<StockBatchBloc>(),
+                                    child: StockBatchExportBottomSheet(
+                                      projectId: project.id,
+                                      projectName: project.name,
+                                    ),
+                                  ),
+                                );
+                              },
+                      );
+                    },
+                  ),
+                ],
               ),
               body: Stack(
                 children: [
@@ -145,12 +257,6 @@ class StockBatchPage extends StatelessWidget {
                                           ProductChosenFromSearchEvent(result),
                                         );
                                       }
-
-                                      if (result != null) {
-                                        bloc.add(
-                                          ProductChosenFromSearchEvent(result),
-                                        );
-                                      }
                                     },
                                   ),
                                   IconButton(
@@ -179,6 +285,37 @@ class StockBatchPage extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (state.suggestions.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(top: 10),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black12, blurRadius: 6),
+                              ],
+                            ),
+                            child: Column(
+                              children: state.suggestions.map((p) {
+                                return ListTile(
+                                  title: Text(p.itemName),
+                                  subtitle: Text(p.itemCode),
+                                  trailing: p.isBatch
+                                      ? const Icon(
+                                          Icons.inventory_2,
+                                          color: Colors.blue,
+                                        )
+                                      : null,
+                                  onTap: () {
+                                    context.read<StockBatchBloc>().add(
+                                      ProductChosenFromSearchEvent(p),
+                                    );
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          ),
 
                         // ---------------- DETAILS ----------------
                         StockBatchDetailsBlock(
@@ -187,6 +324,9 @@ class StockBatchPage extends StatelessWidget {
                           nameController: nameController,
                           qtyController: qtyController,
                           qtyFocusNode: qtyFocusNode,
+                        ),
+                        StockBatchShowItemsList(
+                          projectId: project.id.toString(),
                         ),
                       ],
                     ),

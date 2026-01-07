@@ -24,6 +24,7 @@ import '../../data/services/product_unit_local_service.dart';
 import '../../data/services/products_local_service.dart';
 import '../../data/services/products_sync_service.dart';
 import '../../data/services/products_with_batch_local_service.dart';
+import '../../data/services/stock_batch_export_service.dart';
 import '../../data/services/stock_batch_local_service.dart';
 import '../../data/services/stock_export_service.dart';
 import '../../data/services/stock_local_service.dart';
@@ -152,6 +153,10 @@ void setupGetIt() {
   getIt.registerLazySingleton(
     () => NearExpiryExportService(getIt<NearExpiryRepository>()),
   );
+  getIt.registerLazySingleton<StockBatchExportService>(
+    () => StockBatchExportService(getIt()),
+  );
+
   getIt.registerLazySingleton(() => ProductUnitLocalService());
   getIt.registerLazySingleton(
     () => ProductUnitRemoteService(Supabase.instance.client),

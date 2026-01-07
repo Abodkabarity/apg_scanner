@@ -23,6 +23,13 @@ class ProductsWithBatchRepository {
   final Map<String, List<ProductWithBatchModel>> _byItemCode = {};
 
   // ---------------------------------------------------------------------------
+  // BARCODE NORMALIZATION (🔥 مهم جداً)
+  // ---------------------------------------------------------------------------
+  String _normalizeBarcode(dynamic v) {
+    return v.toString().trim().replaceAll(' ', '');
+  }
+
+  // ---------------------------------------------------------------------------
   // LOGIN WARMUP
   // ---------------------------------------------------------------------------
   Future<void> warmUpAfterLogin() async {
@@ -36,6 +43,12 @@ class ProductsWithBatchRepository {
     }
 
     _runFullDownloadInBackground(start);
+  }
+
+  List<ProductWithBatchModel> searchLocal(
+    bool Function(ProductWithBatchModel) test,
+  ) {
+    return _cache.where(test).toList();
   }
 
   void _runFullDownloadInBackground(DateTime start) {
@@ -112,7 +125,13 @@ class ProductsWithBatchRepository {
   }
 
   ProductWithBatchModel? findByBarcode(String barcode) {
-    final key = barcode.trim();
+    final key = _normalizeBarcode(barcode);
+
+    log('[BatchProducts] LOOKUP BARCODE = [$key]');
+    log(
+      '[BatchProducts] INDEX SAMPLE = ${_barcodeIndex.keys.take(5).toList()}',
+    );
+
     if (key.isEmpty) return null;
     return _barcodeIndex[key];
   }
@@ -120,9 +139,7 @@ class ProductsWithBatchRepository {
   /// Convert string date safely to DateTime
   DateTime? _parseDate(String? value) {
     if (value == null || value.isEmpty) return null;
-
     try {
-      // ISO format
       return DateTime.parse(value);
     } catch (_) {
       return null;
@@ -147,26 +164,28 @@ class ProductsWithBatchRepository {
     return list;
   }
 
-  /// Batches for product + expiry
   List<String> getBatchesForProductAndExpiry(String itemCode, DateTime expiry) {
     final rows = _byItemCode[itemCode] ?? [];
-    final Set<String> set = {};
+    final Set<String> uniqueBatches = {};
 
-    bool sameDay(DateTime a, DateTime b) =>
-        a.year == b.year && a.month == b.month && a.day == b.day;
+    bool sameMonth(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month;
 
     for (final r in rows) {
-      final dt = _parseDate(r.nearExpiryDate);
-      if (dt == null || !sameDay(dt, expiry)) continue;
+      final DateTime? dt = _parseDate(r.nearExpiryDate);
+      if (dt == null) continue;
+      if (!sameMonth(dt, expiry)) continue;
 
-      final batches = r.batches ?? [];
+      final List<String> batches = r.batches ?? const [];
       for (final b in batches) {
         final v = b.trim();
-        if (v.isNotEmpty) set.add(v);
+        if (v.isNotEmpty) {
+          uniqueBatches.add(v);
+        }
       }
     }
 
-    final list = set.toList()..sort();
+    final list = uniqueBatches.toList()..sort();
     return list;
   }
 
@@ -187,8 +206,8 @@ class ProductsWithBatchRepository {
       _byItemCode.putIfAbsent(p.itemCode, () => []);
       _byItemCode[p.itemCode]!.add(p);
 
-      for (final b in p.barcodes ?? []) {
-        final key = b.trim();
+      for (final b in p.barcodes) {
+        final key = _normalizeBarcode(b);
         if (key.isNotEmpty) {
           _barcodeIndex[key] = p;
         }
@@ -208,5 +227,12 @@ class ProductsWithBatchRepository {
   Future<List<ProductWithBatchModel>> searchByItemCode(String code) async {
     final all = await local.loadAll();
     return all.where((p) => p.itemCode == code).toList();
+  }
+
+  List<String> getUnitsForProduct(ProductWithBatchModel product) {
+    if (product.units.isNotEmpty) {
+      return product.units;
+    }
+    return const ['BOX'];
   }
 }

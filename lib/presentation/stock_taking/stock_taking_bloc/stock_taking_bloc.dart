@@ -827,7 +827,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
   ) async {
     await productsRepo.ensureLoaded();
 
-    // 🔹 المنتج
+
     final product = productsRepo.products.firstWhere(
       (p) => p.itemCode == event.group.itemCode,
       orElse: () => throw Exception("Product not found"),

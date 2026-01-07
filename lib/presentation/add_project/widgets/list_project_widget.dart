@@ -7,10 +7,15 @@ import '../../../core/di/injection.dart';
 import '../../../data/model/project_model.dart';
 import '../../../data/repositories/near_expiry_repository.dart';
 import '../../../data/repositories/products_repository.dart';
+import '../../../data/repositories/products_with_batch_repository.dart';
+import '../../../data/repositories/stock_batch_repository.dart';
 import '../../../data/repositories/stock_taking_repository.dart';
 import '../../near_expiry/near_expiry_bloc/near_expiry_bloc.dart';
 import '../../near_expiry/near_expiry_bloc/near_expiry_event.dart';
 import '../../near_expiry/near_expiry_page.dart';
+import '../../stock_batch/stock_batch_bloc/stock_batch_bloc.dart';
+import '../../stock_batch/stock_batch_bloc/stock_batch_event.dart';
+import '../../stock_batch/stock_batch_page.dart';
 import '../../stock_taking/stock_taking_bloc/stock_taking_bloc.dart';
 import '../../stock_taking/stock_taking_bloc/stock_taking_event.dart';
 import '../../stock_taking/stock_taking_page.dart';
@@ -45,32 +50,54 @@ class ListProjectWidget extends StatelessWidget {
           icon: Icon(Icons.delete, color: AppColor.secondaryColor),
         ),
         onTap: () {
-          if (projectType == ProjectType.stockTaking) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (_) => StockBloc(
-                    getIt<StockRepository>(),
-                    getIt<ProductsRepository>(),
-                  )..add(LoadStockEvent(projects.id.toString())),
-                  child: StockTakingPage(projects: projects),
+          switch (projectType) {
+            // ---------------- STOCK TAKING ----------------
+            case ProjectType.stockTaking:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider(
+                    create: (_) => StockBloc(
+                      getIt<StockRepository>(),
+                      getIt<ProductsRepository>(),
+                    )..add(LoadStockEvent(projects.id.toString())),
+                    child: StockTakingPage(projects: projects),
+                  ),
                 ),
-              ),
-            );
-          } else {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (_) => NearExpiryBloc(
-                    getIt<NearExpiryRepository>(),
-                    getIt<ProductsRepository>(),
-                  )..add(LoadNearExpiryEvent(projects.id.toString())),
-                  child: NearExpiryPage(projects: projects),
+              );
+              break;
+
+            // ---------------- NEAR EXPIRY ----------------
+            case ProjectType.nearExpiry:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider(
+                    create: (_) => NearExpiryBloc(
+                      getIt<NearExpiryRepository>(),
+                      getIt<ProductsRepository>(),
+                    )..add(LoadNearExpiryEvent(projects.id.toString())),
+                    child: NearExpiryPage(projects: projects),
+                  ),
                 ),
-              ),
-            );
+              );
+              break;
+
+            // ---------------- STOCK BATCH ----------------
+            case ProjectType.stockBatch:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider(
+                    create: (_) => StockBatchBloc(
+                      getIt<StockBatchRepository>(),
+                      getIt<ProductsWithBatchRepository>(),
+                    )..add(LoadStockBatchEvent(projects.id.toString())),
+                    child: StockBatchPage(project: projects),
+                  ),
+                ),
+              );
+              break;
           }
         },
       ),

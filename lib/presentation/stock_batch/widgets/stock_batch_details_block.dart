@@ -35,8 +35,6 @@ class StockBatchDetailsBlock extends StatelessWidget {
         final bloc = context.read<StockBatchBloc>();
         final product = state.currentProduct;
 
-        if (product == null) return const SizedBox.shrink();
-
         return Container(
           margin: const EdgeInsets.all(8),
           padding: const EdgeInsets.all(20),
@@ -46,7 +44,7 @@ class StockBatchDetailsBlock extends StatelessWidget {
           ),
           child: Column(
             children: [
-              // ITEM NAME
+              // ---------------- ITEM NAME ----------------
               TextField(
                 controller: nameController,
                 readOnly: true,
@@ -59,65 +57,106 @@ class StockBatchDetailsBlock extends StatelessWidget {
 
               SizedBox(height: 10.h),
 
-              // ---------------- BATCH FLOW ----------------
-              if (state.isBatch) ...[
-                DropdownButtonFormField2<DateTime>(
-                  value: state.selectedExpiry,
-                  items: state.expiryOptions
-                      .map(
-                        (d) => DropdownMenuItem(value: d, child: Text(_fmt(d))),
+              // ---------------- BATCH FLOW (ANIMATED) ----------------
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  return SizeTransition(
+                    sizeFactor: animation,
+                    axisAlignment: -1,
+                    child: FadeTransition(opacity: animation, child: child),
+                  );
+                },
+                child: state.isBatch
+                    ? Column(
+                        key: const ValueKey('batch_on'),
+                        children: [
+                          DropdownButtonFormField2<DateTime>(
+                            value:
+                                state.expiryOptions.contains(
+                                  state.selectedExpiry,
+                                )
+                                ? state.selectedExpiry
+                                : null,
+                            items: state.expiryOptions
+                                .map(
+                                  (d) => DropdownMenuItem(
+                                    value: d,
+                                    child: Text(_fmt(d)),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) {
+                              if (v != null) {
+                                bloc.add(
+                                  ChangeSelectedExpiryEvent(
+                                    itemCode: product!.itemCode,
+                                    expiry: v,
+                                  ),
+                                );
+                              }
+                            },
+                            decoration: const InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              labelText: "Near Expiry",
+                            ),
+                          ),
+
+                          SizedBox(height: 10.h),
+
+                          DropdownButtonFormField2<String>(
+                            value:
+                                state.batchOptions.contains(state.selectedBatch)
+                                ? state.selectedBatch
+                                : null,
+                            items: state.batchOptions
+                                .map(
+                                  (b) => DropdownMenuItem(
+                                    value: b,
+                                    child: Text(b),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: state.batchOptions.isEmpty
+                                ? null
+                                : (v) {
+                                    if (v != null) {
+                                      bloc.add(ChangeSelectedBatchEvent(v));
+                                    }
+                                  },
+                            decoration: const InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              labelText: "Batch",
+                            ),
+                          ),
+
+                          SizedBox(height: 10.h),
+                        ],
                       )
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      bloc.add(
-                        ChangeSelectedExpiryEvent(
-                          itemCode: product.itemCode,
-                          expiry: v,
-                        ),
-                      );
-                    }
-                  },
-                  decoration: const InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white,
-                    labelText: "Near Expiry",
-                  ),
-                ),
-
-                SizedBox(height: 10.h),
-
-                DropdownButtonFormField2<String>(
-                  value: state.selectedBatch,
-                  items: state.batchOptions
-                      .map((b) => DropdownMenuItem(value: b, child: Text(b)))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      bloc.add(ChangeSelectedBatchEvent(v));
-                    }
-                  },
-                  decoration: const InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white,
-                    labelText: "Batch",
-                  ),
-                ),
-
-                SizedBox(height: 10.h),
-              ],
+                    : const SizedBox(key: ValueKey('batch_off')),
+              ),
 
               // ---------------- UNIT ----------------
               DropdownButtonFormField2<String>(
-                value: state.selectedUnit,
+                value: state.units.contains(state.selectedUnit)
+                    ? state.selectedUnit
+                    : null,
                 items: state.units
-                    .map((u) => DropdownMenuItem(value: u, child: Text(u)))
+                    .map(
+                      (u) => DropdownMenuItem<String>(value: u, child: Text(u)),
+                    )
                     .toList(),
-                onChanged: (v) {
-                  if (v != null) {
-                    bloc.add(ChangeUnitEvent(v));
-                  }
-                },
+                onChanged: state.units.isEmpty
+                    ? null
+                    : (v) {
+                        if (v != null) {
+                          bloc.add(ChangeUnitEvent(v));
+                        }
+                      },
                 decoration: const InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
@@ -151,6 +190,48 @@ class StockBatchDetailsBlock extends StatelessWidget {
                   onPressed: () {
                     final qty = double.tryParse(qtyController.text.trim()) ?? 0;
 
+                    if (state.currentProduct == null) {
+                      showTopSnackBar(
+                        context,
+                        message: "Select item first",
+                        backgroundColor: Colors.orange,
+                        icon: Icons.info,
+                      );
+                      return;
+                    }
+
+                    if (state.isBatch && state.selectedExpiry == null) {
+                      showTopSnackBar(
+                        context,
+                        message: "Near expiry required",
+                        backgroundColor: Colors.orange,
+                        icon: Icons.info,
+                      );
+                      return;
+                    }
+
+                    if (state.isBatch &&
+                        (state.selectedBatch == null ||
+                            state.selectedBatch!.isEmpty)) {
+                      showTopSnackBar(
+                        context,
+                        message: "Batch required",
+                        backgroundColor: Colors.orange,
+                        icon: Icons.info,
+                      );
+                      return;
+                    }
+
+                    if (state.selectedUnit == null) {
+                      showTopSnackBar(
+                        context,
+                        message: "Unit required",
+                        backgroundColor: Colors.orange,
+                        icon: Icons.info,
+                      );
+                      return;
+                    }
+
                     if (qty <= 0) {
                       showTopSnackBar(
                         context,
@@ -166,7 +247,7 @@ class StockBatchDetailsBlock extends StatelessWidget {
                         projectId: project.id.toString(),
                         projectName: project.name,
                         barcode: scanController.text.trim(),
-                        unit: state.selectedUnit ?? 'BOX',
+                        unit: state.selectedUnit!,
                         qty: qty,
                       ),
                     );

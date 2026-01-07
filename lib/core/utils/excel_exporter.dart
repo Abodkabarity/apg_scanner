@@ -126,4 +126,64 @@ class ExcelExporter {
 
     return path != null;
   }
+
+  // ------------------------------------------------------------
+  // STOCK BATCH EXCEL BYTES
+  // ------------------------------------------------------------
+  static Future<Uint8List> buildStockBatchExcelBytes(
+    List<Map<String, dynamic>> data,
+  ) async {
+    final excel = Excel.createExcel();
+    final sheet = excel['Stock Batch'];
+
+    // HEADER
+    sheet.appendRow([
+      TextCellValue('Branch'),
+      TextCellValue('Item Code'),
+      TextCellValue('Item Name'),
+      TextCellValue('Barcode'),
+      TextCellValue('Unit'),
+      TextCellValue('Quantity'),
+      TextCellValue('Near Expiry'),
+      TextCellValue('Batch'),
+      TextCellValue('Created At'),
+    ]);
+
+    for (final row in data) {
+      sheet.appendRow([
+        TextCellValue(row['Branch']?.toString() ?? ''),
+        TextCellValue(row['Item Code']?.toString() ?? ''),
+        TextCellValue(row['Item Name']?.toString() ?? ''),
+        TextCellValue(row['Barcode']?.toString() ?? ''),
+        TextCellValue(row['Unit']?.toString() ?? ''),
+        TextCellValue(row['Quantity']?.toString() ?? '0'),
+        TextCellValue(row['Near Expiry']?.toString() ?? ''),
+        TextCellValue(row['Batch']?.toString() ?? ''),
+        TextCellValue(row['Created At']?.toString() ?? ''),
+      ]);
+    }
+
+    excel.delete('Sheet1');
+    excel.setDefaultSheet('Stock Batch');
+
+    return Uint8List.fromList(excel.encode()!);
+  }
+
+  static Future<void> saveStockBatchExcel(
+    List<Map<String, dynamic>> data, {
+    required String fileName,
+  }) async {
+    final bytes = await buildStockBatchExcelBytes(data);
+    await saveExcel(bytes, fileName);
+  }
+
+  static Future<void> saveExcel(Uint8List bytes, String fileName) async {
+    await FilePicker.platform.saveFile(
+      dialogTitle: 'Save Excel File',
+      fileName: fileName,
+      type: FileType.custom,
+      allowedExtensions: ['xlsx'],
+      bytes: bytes,
+    );
+  }
 }

@@ -28,7 +28,7 @@ class StockBatchRepository {
     required String projectId,
     required String itemCode,
     required String unit,
-    required String batch,
+    required String? batch,
   }) async {
     final items = await loadItems(projectId);
 
@@ -57,7 +57,7 @@ class StockBatchRepository {
     required String unit,
     required double qty,
     required DateTime? expiry,
-    required String batch,
+    required String? batch,
   }) async {
     final item = StockBatchItemModel(
       id: const Uuid().v4(),
@@ -146,5 +146,31 @@ class StockBatchRepository {
   // ---------------------------------------------------------------------------
   Future<void> clearProject(String projectId) {
     return local.clearProject(projectId);
+  }
+
+  Future<List<Map<String, dynamic>>> buildStockBatchExcelData({
+    required String projectId,
+  }) async {
+    final items = await loadItems(projectId);
+
+    final visible = items.where((e) => !e.isDeleted).toList();
+
+    if (visible.isEmpty) return [];
+
+    return visible.map((e) {
+      return {
+        'Branch': e.branchName,
+        'Item Code': e.itemCode,
+        'Item Name': e.itemName,
+        'Barcode': e.barcode,
+        'Unit': e.unitType,
+        'Quantity': e.quantity,
+        'Near Expiry': e.nearExpiry != null
+            ? e.nearExpiry!.toIso8601String()
+            : '',
+        'Batch': e.batch ?? '',
+        'Created At': e.createdAt.toIso8601String(),
+      };
+    }).toList();
   }
 }

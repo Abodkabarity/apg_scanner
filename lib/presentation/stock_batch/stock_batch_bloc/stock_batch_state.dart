@@ -80,6 +80,10 @@ class StockBatchState extends Equatable {
 
     this.resetForm = false,
   });
+  // ---------------------------------------------------------------------------
+  // SYNC STATUS
+  // ---------------------------------------------------------------------------
+  bool get hasUnsyncedItems => items.any((e) => !e.isSynced && !e.isDeleted);
 
   // ---------------------------------------------------------------------------
   // COPY
@@ -91,6 +95,7 @@ class StockBatchState extends Equatable {
     List<StockBatchGroup>? filteredGroupedItems,
 
     ProductWithBatchModel? currentProduct,
+    bool clearCurrentProduct = false,
 
     List<DateTime>? expiryOptions,
     DateTime? selectedExpiry,
@@ -118,7 +123,9 @@ class StockBatchState extends Equatable {
       groupedItems: groupedItems ?? this.groupedItems,
       filteredGroupedItems: filteredGroupedItems ?? this.filteredGroupedItems,
 
-      currentProduct: currentProduct ?? this.currentProduct,
+      currentProduct: clearCurrentProduct
+          ? null
+          : currentProduct ?? this.currentProduct,
 
       expiryOptions: expiryOptions ?? this.expiryOptions,
       selectedExpiry: selectedExpiry ?? this.selectedExpiry,

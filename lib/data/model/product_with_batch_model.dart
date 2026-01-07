@@ -11,7 +11,6 @@ class ProductWithBatchModel {
   final bool isBatch;
 
   final String nearExpiryDate;
-
   final List<String>? batches; // nullable
 
   ProductWithBatchModel({
@@ -25,36 +24,59 @@ class ProductWithBatchModel {
     required this.batches,
   });
 
+  // ---------------------------------------------------------------------------
+  // FACTORY
+  // ---------------------------------------------------------------------------
   factory ProductWithBatchModel.fromMap(Map<String, dynamic> map) {
     List<String> _toStringList(dynamic v) {
-      if (v == null) return <String>[];
-      if (v is List) return v.map((e) => e.toString()).toList();
-      if (v is String) {
-        final decoded = jsonDecode(v);
-        if (decoded is List) return decoded.map((e) => e.toString()).toList();
+      try {
+        if (v == null) return <String>[];
+
+        if (v is List) {
+          return v.map((e) => e.toString()).toList();
+        }
+
+        if (v is String && v.isNotEmpty) {
+          final decoded = jsonDecode(v);
+          if (decoded is List) {
+            return decoded.map((e) => e.toString()).toList();
+          }
+        }
+      } catch (_) {
+        // ignore invalid json
       }
       return <String>[];
     }
 
-    String _dateToYmd(dynamic v) {
+    String _safeDate(dynamic v) {
       if (v == null) return '';
-      return v.toString().substring(0, 10);
+      final s = v.toString();
+      if (s.isEmpty) return '';
+      return s.length >= 10 ? s.substring(0, 10) : s;
     }
 
     return ProductWithBatchModel(
       itemCode: (map['item_code'] ?? '').toString(),
       itemName: (map['item_name'] ?? '').toString(),
+
       barcodes: _toStringList(map['barcodes']),
       units: _toStringList(map['units']),
+
       subunitQty: map['subunit_qty'] == null
           ? null
           : (map['subunit_qty'] as num).toDouble(),
-      isBatch: (map['is_batch'] == true),
-      nearExpiryDate: _dateToYmd(map['near_expiry_date']),
+
+      isBatch: map['is_batch'] == true,
+
+      nearExpiryDate: _safeDate(map['near_expiry_date']),
+
       batches: map['batches'] == null ? null : _toStringList(map['batches']),
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // MAP
+  // ---------------------------------------------------------------------------
   Map<String, dynamic> toMap() => {
     'item_code': itemCode,
     'item_name': itemName,
@@ -66,6 +88,8 @@ class ProductWithBatchModel {
     'batches': batches,
   };
 
-  ///
+  // ---------------------------------------------------------------------------
+  // CACHE
+  // ---------------------------------------------------------------------------
   String get cacheKey => '$itemCode|$nearExpiryDate';
 }

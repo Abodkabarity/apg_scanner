@@ -122,3 +122,38 @@ class DeleteBatchItemEvent extends StockBatchEvent {
 class ResetBatchFormEvent extends StockBatchEvent {
   const ResetBatchFormEvent();
 }
+
+class ExportStockBatchExcelEvent extends StockBatchEvent {
+  final String projectId;
+  final String projectName;
+
+  const ExportStockBatchExcelEvent({
+    required this.projectId,
+    required this.projectName,
+  });
+
+  @override
+  List<Object?> get props => [projectId, projectName];
+}
+
+class SendStockBatchByEmailEvent extends StockBatchEvent {
+  final String projectId;
+  final String projectName;
+
+  const SendStockBatchByEmailEvent({
+    required this.projectId,
+    required this.projectName,
+  });
+
+  @override
+  List<Object?> get props => [projectId, projectName];
+}
+
+class UploadStockBatchEvent extends StockBatchEvent {
+  final String projectId;
+
+  const UploadStockBatchEvent({required this.projectId});
+
+  @override
+  List<Object?> get props => [projectId];
+}

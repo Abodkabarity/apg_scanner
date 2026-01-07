@@ -6,7 +6,6 @@ class ProductsWithBatchRemoteService {
   final SupabaseClient _db;
   ProductsWithBatchRemoteService(this._db);
 
-  /// Full download paginated (لأول مرة فقط)
   Future<List<ProductWithBatchModel>> fetchAllPaged({
     int pageSize = 5000,
     void Function(int fetched)? onProgress,
