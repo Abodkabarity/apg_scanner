@@ -4,6 +4,8 @@ import '../../../../data/model/product_with_batch_model.dart';
 import '../../../../data/model/stock_batch_item_model.dart';
 import '../../../data/model/stock_batch_group.dart';
 
+enum SnackType { success, info, error }
+
 class StockBatchState extends Equatable {
   // ---------------------------------------------------------------------------
   // UI STATUS
@@ -16,6 +18,8 @@ class StockBatchState extends Equatable {
   final List<StockBatchItemModel> items;
   final List<StockBatchGroup> groupedItems;
   final List<StockBatchGroup> filteredGroupedItems;
+  final DateTime? manualExpiry;
+  final String? manualBatch;
 
   // ---------------------------------------------------------------------------
   // CURRENT PRODUCT
@@ -31,6 +35,7 @@ class StockBatchState extends Equatable {
 
   final List<String> batchOptions;
   final String? selectedBatch;
+  final SnackType? snackType;
 
   // ---------------------------------------------------------------------------
   // UNIT / QTY
@@ -79,6 +84,9 @@ class StockBatchState extends Equatable {
     this.success,
 
     this.resetForm = false,
+    this.snackType,
+    this.manualExpiry,
+    this.manualBatch,
   });
   // ---------------------------------------------------------------------------
   // SYNC STATUS
@@ -93,6 +101,8 @@ class StockBatchState extends Equatable {
     List<StockBatchItemModel>? items,
     List<StockBatchGroup>? groupedItems,
     List<StockBatchGroup>? filteredGroupedItems,
+    DateTime? manualExpiry,
+    String? manualBatch,
 
     ProductWithBatchModel? currentProduct,
     bool clearCurrentProduct = false,
@@ -102,6 +112,7 @@ class StockBatchState extends Equatable {
 
     List<String>? batchOptions,
     String? selectedBatch,
+    SnackType? snackType,
 
     List<String>? units,
     String? selectedUnit,
@@ -129,12 +140,14 @@ class StockBatchState extends Equatable {
 
       expiryOptions: expiryOptions ?? this.expiryOptions,
       selectedExpiry: selectedExpiry ?? this.selectedExpiry,
+      snackType: snackType ?? this.snackType,
 
       batchOptions: batchOptions ?? this.batchOptions,
-      selectedBatch: selectedBatch ?? this.selectedBatch,
 
       units: units ?? this.units,
       selectedUnit: selectedUnit ?? this.selectedUnit,
+      manualExpiry: manualExpiry ?? this.manualExpiry,
+      manualBatch: manualBatch ?? this.manualBatch,
 
       suggestions: suggestions ?? this.suggestions,
       scannedBarcode: scannedBarcode ?? this.scannedBarcode,
@@ -166,13 +179,13 @@ class StockBatchState extends Equatable {
 
     units,
     selectedUnit,
-
+    manualBatch,
     suggestions,
     scannedBarcode,
-
+    manualExpiry,
     error,
     success,
-
+    snackType,
     resetForm,
   ];
 }

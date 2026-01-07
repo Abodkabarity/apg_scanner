@@ -22,7 +22,8 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     on<ChangeSelectedExpiryEvent>(_onChangeExpiry);
     on<ChangeSelectedBatchEvent>(_onChangeBatch);
     on<ApproveBatchItemEvent>(_onApprove);
-    on<DeleteBatchItemEvent>(_onDelete);
+    on<DeleteStockBatchGroupEvent>(_onDeleteGroup);
+
     on<SearchBatchQueryChanged>(_onSearch);
     on<ResetBatchFormEvent>(_onReset);
     on<ProductChosenFromSearchEvent>(_onProductChosenFromSearch);
@@ -30,6 +31,7 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     on<ExportStockBatchExcelEvent>(_onExportExcel);
     on<SendStockBatchByEmailEvent>(_onSendByEmail);
     on<UploadStockBatchEvent>(_onUpload);
+    on<UpdateStockBatchItemEvent>(_onUpdateItem);
   }
   final exportService = getIt<StockBatchExportService>();
 
@@ -155,9 +157,14 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     emit(
       state.copyWith(
         selectedExpiry: event.expiry,
+
+        manualExpiry: event.isManual ? event.expiry : null,
+
         batchOptions: batches,
 
         selectedBatch: batches.length == 1 ? batches.first : null,
+
+        manualBatch: null,
       ),
     );
   }
@@ -167,7 +174,13 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     ChangeSelectedBatchEvent event,
     Emitter<StockBatchState> emit,
   ) {
-    emit(state.copyWith(selectedBatch: event.batch));
+    emit(
+      state.copyWith(
+        selectedBatch: event.batch,
+
+        manualBatch: event.isManual ? event.batch : null,
+      ),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -266,19 +279,33 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
   }
 
   // ---------------------------------------------------------------------------
-  Future<void> _onDelete(
-    DeleteBatchItemEvent event,
+  Future<void> _onDeleteGroup(
+    DeleteStockBatchGroupEvent event,
     Emitter<StockBatchState> emit,
   ) async {
-    await repo.delete(event.id);
+    emit(state.copyWith(loading: true));
 
-    final items = await repo.loadItems(event.projectId);
-    final visible = items.where((e) => !e.isDeleted).toList();
+    // كل العناصر التي تنتمي لهذا group
+    final itemsToDelete = state.items
+        .where(
+          (e) =>
+              e.itemCode == event.group.itemCode &&
+              (e.batch ?? '-') == event.group.batch,
+        )
+        .toList();
+
+    for (final item in itemsToDelete) {
+      await repo.delete(item.id);
+    }
+
+    final refreshed = await repo.loadItems(event.projectId);
+    final visible = refreshed.where((e) => !e.isDeleted).toList();
     final groups = _groupByItemAndBatch(visible);
 
     emit(
       state.copyWith(
-        items: items,
+        loading: false,
+        items: refreshed,
         groupedItems: groups,
         filteredGroupedItems: groups,
         success: "Item deleted successfully",
@@ -300,13 +327,9 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
 
     await productsRepo.ensureLoaded();
 
-    final results = productsRepo.searchLocal((p) {
-      return p.itemName.toLowerCase().contains(q) ||
-          p.itemCode.toLowerCase().contains(q) ||
-          p.barcodes.any((b) => b.contains(q));
-    });
+    final results = productsRepo.searchUniqueByQuery(q);
 
-    emit(state.copyWith(suggestions: results.take(10).toList()));
+    emit(state.copyWith(suggestions: results.take(100).toList()));
   }
 
   // ---------------------------------------------------------------------------
@@ -337,9 +360,7 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     final Map<String, List<StockBatchItemModel>> map = {};
 
     for (final it in items) {
-      final batchKey = it.batch ?? '-';
-      final key = '${it.itemCode}__$batchKey';
-
+      final key = '${it.itemCode}__${it.batch ?? '-'}';
       map.putIfAbsent(key, () => []);
       map[key]!.add(it);
     }
@@ -349,11 +370,27 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     for (final entry in map.entries) {
       final rows = entry.value;
 
-      double totalQty = 0;
+      final product = productsRepo
+          .searchLocal((p) => p.itemCode == rows.first.itemCode)
+          .firstOrNull;
+
+      final int subUnitQty = product?.subunitQty?.toInt() ?? 1;
+
+      final Map<String, double> unitQty = {};
       DateTime latest = rows.first.createdAt;
+      double total = 0;
 
       for (final r in rows) {
-        totalQty += r.quantity;
+        unitQty[r.unitType] = (unitQty[r.unitType] ?? 0) + r.quantity;
+
+        if (r.unitType.toLowerCase() == 'box') {
+          total += r.quantity;
+        } else {
+          if (subUnitQty > 0) {
+            total += r.quantity / subUnitQty;
+          }
+        }
+
         if (r.createdAt.isAfter(latest)) {
           latest = r.createdAt;
         }
@@ -364,18 +401,17 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
           itemCode: rows.first.itemCode,
           itemName: rows.first.itemName,
           barcode: rows.first.barcode,
-
           batch: rows.first.batch ?? '-',
-
           nearExpiry: rows.first.nearExpiry,
-
-          totalQty: totalQty,
+          unitQty: unitQty,
+          totalQty: total,
           latestCreatedAt: latest,
         ),
       );
     }
 
     groups.sort((a, b) => b.latestCreatedAt.compareTo(a.latestCreatedAt));
+
     return groups;
   }
 
@@ -489,17 +525,183 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     Emitter<StockBatchState> emit,
   ) async {
     try {
-      emit(state.copyWith(loading: true));
+      emit(state.copyWith(loading: true, clearError: true, clearSuccess: true));
 
-      await repo.syncUp(event.projectId);
+      final hasUploaded = await repo.syncUp(event.projectId);
 
       final items = await repo.loadItems(event.projectId);
+
+      if (!hasUploaded) {
+        emit(
+          state.copyWith(
+            loading: false,
+            items: items,
+            snackType: SnackType.info, // ✅ هنا
+
+            success: "No changes to upload",
+          ),
+        );
+        return;
+      }
 
       emit(
         state.copyWith(
           loading: false,
           items: items,
+          snackType: SnackType.success, // ✅ هنا
+
           success: "Stock Batch uploaded successfully",
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          loading: false,
+          error: e.toString(),
+          snackType: SnackType.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _onUpdateItem(
+    UpdateStockBatchItemEvent event,
+    Emitter<StockBatchState> emit,
+  ) async {
+    emit(state.copyWith(loading: true));
+
+    final rows = state.items
+        .where(
+          (e) =>
+              !e.isDeleted &&
+              e.itemCode == event.group.itemCode &&
+              (e.batch ?? '-') == event.group.batch,
+        )
+        .toList();
+
+    if (rows.isEmpty) {
+      emit(state.copyWith(loading: false, error: "Item rows not found"));
+      return;
+    }
+
+    for (final entry in event.newUnitQty.entries) {
+      final unit = entry.key;
+      final qty = entry.value;
+
+      final existingRows = rows.where((r) => r.unitType == unit).toList();
+
+      if (existingRows.isNotEmpty) {
+        for (final r in existingRows) {
+          await repo.updateItemQty(
+            item: r.copyWith(
+              quantity: qty,
+              nearExpiry: event.newExpiry,
+              batch: event.newBatch ?? r.batch,
+              subUnitQty: r.subUnitQty, // ✅ لا تفقدها
+              isSynced: false,
+            ),
+            qty: qty,
+          );
+        }
+      } else {
+        // ---------------- NEW UNIT ROW ----------------
+        final product = productsRepo.getByItemCode(rows.first.itemCode).first;
+
+        await repo.saveNewItem(
+          projectId: rows.first.projectId,
+          projectName: rows.first.projectName,
+          branchName: rows.first.branchName,
+          product: product,
+          barcode: rows.first.barcode,
+          unit: unit,
+          qty: qty,
+          expiry: event.newExpiry,
+          batch: event.newBatch ?? rows.first.batch,
+        );
+      }
+    }
+
+    final refreshed = await repo.loadItems(event.projectId);
+    final visible = refreshed.where((e) => !e.isDeleted).toList();
+    final groups = _groupByItemAndBatch(visible);
+
+    emit(
+      state.copyWith(
+        loading: false,
+        items: refreshed,
+        groupedItems: groups,
+        filteredGroupedItems: groups,
+        success: "Item updated successfully",
+      ),
+    );
+  }
+
+  Future<void> _onUpdateGroup(
+    UpdateStockBatchItemEvent event,
+    Emitter<StockBatchState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(loading: true));
+
+      // rows inside group
+      final rows = state.items
+          .where(
+            (e) =>
+                !e.isDeleted &&
+                e.itemCode == event.group.itemCode &&
+                (e.batch ?? '-') == event.group.batch,
+          )
+          .toList();
+
+      if (rows.isEmpty) {
+        emit(state.copyWith(loading: false, error: "Item rows not found"));
+        return;
+      }
+
+      for (final entry in event.newUnitQty.entries) {
+        final unit = entry.key;
+        final qty = entry.value;
+
+        final existing = rows.where((r) => r.unitType == unit).toList();
+
+        if (existing.isNotEmpty) {
+          for (final r in existing) {
+            await repo.updateFullItem(
+              item: r.copyWith(
+                quantity: qty,
+                nearExpiry: event.newExpiry,
+                batch: event.newBatch ?? r.batch,
+                isSynced: false,
+              ),
+            );
+          }
+        } else {
+          await repo.addManualRow(
+            projectId: rows.first.projectId,
+            projectName: rows.first.projectName,
+            branchName: rows.first.branchName,
+            itemCode: rows.first.itemCode,
+            itemName: rows.first.itemName,
+            barcode: rows.first.barcode,
+            unitType: unit,
+            qty: qty,
+            nearExpiry: event.newExpiry,
+            batch: event.newBatch ?? rows.first.batch,
+          );
+        }
+      }
+
+      final items = await repo.loadItems(event.projectId);
+      final visible = items.where((e) => !e.isDeleted).toList();
+      final groups = _groupByItemAndBatch(visible);
+
+      emit(
+        state.copyWith(
+          loading: false,
+          items: items,
+          groupedItems: groups,
+          filteredGroupedItems: groups,
+          success: "Item updated successfully",
         ),
       );
     } catch (e) {

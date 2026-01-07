@@ -4,6 +4,7 @@ class StockBatchItemModel {
   final String projectId;
   final String projectName;
   final String branchName;
+  final double? subUnitQty;
 
   final String itemCode;
   final String itemName;
@@ -35,6 +36,7 @@ class StockBatchItemModel {
     required this.isSynced,
     required this.isDeleted,
     required this.createdAt,
+    this.subUnitQty,
   });
 
   StockBatchItemModel copyWith({
@@ -51,6 +53,8 @@ class StockBatchItemModel {
     String? batch,
     bool? isSynced,
     bool? isDeleted,
+    double? subUnitQty,
+
     DateTime? createdAt,
     bool clearNearExpiry = false,
     bool clearBatch = false,
@@ -70,6 +74,7 @@ class StockBatchItemModel {
       isSynced: isSynced ?? this.isSynced,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
+      subUnitQty: subUnitQty ?? this.subUnitQty,
     );
   }
 
@@ -83,6 +88,8 @@ class StockBatchItemModel {
     'barcode': barcode,
     'unit': unitType,
     'qty': quantity,
+    'sub_unit_qty': subUnitQty,
+
     'near_expiry': nearExpiry?.toIso8601String(),
     'batch': batch,
     'is_synced': isSynced,
@@ -108,6 +115,9 @@ class StockBatchItemModel {
       quantity: (json['qty'] is num)
           ? (json['qty'] as num).toDouble()
           : double.tryParse((json['qty'] ?? '0').toString()) ?? 0.0,
+      subUnitQty: (json['sub_unit_qty'] is num)
+          ? (json['sub_unit_qty'] as num).toDouble()
+          : double.tryParse('${json['sub_unit_qty']}'),
 
       nearExpiry: parseDt(json['near_expiry']),
       batch: json['batch']?.toString(),

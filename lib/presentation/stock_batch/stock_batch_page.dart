@@ -32,37 +32,46 @@ class StockBatchPage extends StatelessWidget {
       listeners: [
         // SUCCESS
         BlocListener<StockBatchBloc, StockBatchState>(
-          listenWhen: (p, c) => p.success != c.success,
+          listenWhen: (p, c) => p.success != c.success || p.error != c.error,
           listener: (context, state) {
-            if (state.success == null) return;
+            final message = state.error ?? state.success;
+            if (message == null) return;
+
+            final type = state.snackType ?? SnackType.success;
+
+            Color color;
+            IconData icon;
+
+            switch (type) {
+              case SnackType.info:
+                color = Colors.blueGrey;
+                icon = Icons.info;
+                break;
+              case SnackType.error:
+                color = Colors.red.shade700;
+                icon = Icons.error;
+                break;
+              case SnackType.success:
+                color = Colors.green;
+                icon = Icons.check_circle;
+            }
 
             showTopSnackBar(
               context,
-              message: state.success!,
-              backgroundColor: Colors.green,
-              icon: Icons.check_circle,
+              message: message,
+              backgroundColor: color,
+              icon: icon,
             );
-            nameController.clear();
-            scanController.clear();
-            qtyController.clear();
-            FocusScope.of(context).unfocus();
 
-            context.read<StockBatchBloc>().add(ResetBatchFormEvent());
-          },
-        ),
+            // امسح الحقول فقط عند success حقيقي
+            if (type == SnackType.success) {
+              nameController.clear();
+              scanController.clear();
+              qtyController.clear();
+              FocusScope.of(context).unfocus();
 
-        // ERROR
-        BlocListener<StockBatchBloc, StockBatchState>(
-          listenWhen: (p, c) => p.error != c.error,
-          listener: (context, state) {
-            if (state.error == null) return;
-
-            showTopSnackBar(
-              context,
-              message: state.error!,
-              backgroundColor: Colors.red.shade700,
-              icon: Icons.error,
-            );
+              context.read<StockBatchBloc>().add(ResetBatchFormEvent());
+            }
           },
         ),
 

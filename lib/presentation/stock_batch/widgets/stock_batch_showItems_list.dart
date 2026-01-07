@@ -1,3 +1,4 @@
+import 'package:apg_scanner/presentation/stock_batch/widgets/stock_batch_edit_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -121,39 +122,86 @@ class StockBatchShowItemsList extends StatelessWidget {
                                   fontSize: 13.sp,
                                 ),
                               ),
+                              onTap: () async {
+                                final bloc = context.read<StockBatchBloc>();
+                                final productsRepo = bloc.productsRepo;
 
-                              // ---------------- DELETE ----------------
-                              onLongPress: () async {
                                 final confirm = await showDialog<bool>(
                                   context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: const Text("Delete Item"),
+                                  builder: (_) => AlertDialog(
+                                    title: const Text("Edit Item"),
                                     content: const Text(
-                                      "Do you want to delete this item?",
+                                      "Do you want to edit this item?",
                                     ),
                                     actions: [
                                       TextButton(
                                         onPressed: () =>
-                                            Navigator.pop(ctx, false),
-                                        child: const Text("Cancel"),
+                                            Navigator.pop(context, false),
+                                        child: const Text("No"),
                                       ),
                                       ElevatedButton(
                                         onPressed: () =>
-                                            Navigator.pop(ctx, true),
-                                        child: const Text("Delete"),
+                                            Navigator.pop(context, true),
+                                        child: const Text("Yes"),
                                       ),
                                     ],
                                   ),
                                 );
 
-                                if (confirm == true) {
-                                  context.read<StockBatchBloc>().add(
-                                    DeleteBatchItemEvent(
-                                      projectId: projectId,
-                                      id: '',
+                                if (confirm != true) return;
+
+                                final product = productsRepo
+                                    .searchLocal(
+                                      (p) => p.itemCode == group.itemCode,
+                                    )
+                                    .first;
+
+                                showDialog(
+                                  barrierDismissible: false,
+                                  context: context,
+                                  builder: (_) => BlocProvider.value(
+                                    value: bloc,
+                                    child: StockBatchMultiUnitDialog(
+                                      group: group,
+
+                                      allUnits: productsRepo.getUnitsForProduct(
+                                        product,
+                                      ),
+
+                                      subUnitQty:
+                                          product.subunitQty?.toInt() ?? 1,
+
+                                      initialUnitQty: Map<String, double>.from(
+                                        group.unitQty,
+                                      ),
+
+                                      initialExpiry: group.nearExpiry,
+                                      initialBatch: group.batch,
+
+                                      onApply:
+                                          (newUnitQty, newExpiry, newBatch) {
+                                            bloc.add(
+                                              UpdateStockBatchItemEvent(
+                                                projectId: projectId,
+                                                group: group,
+                                                newUnitQty: newUnitQty,
+                                                newExpiry: newExpiry,
+                                                newBatch: newBatch,
+                                              ),
+                                            );
+                                          },
+
+                                      onDelete: () {
+                                        bloc.add(
+                                          DeleteStockBatchGroupEvent(
+                                            projectId: projectId,
+                                            group: group,
+                                          ),
+                                        );
+                                      },
                                     ),
-                                  );
-                                }
+                                  ),
+                                );
                               },
                             ),
                           );

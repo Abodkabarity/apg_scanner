@@ -7,7 +7,8 @@ class StockBatchRemoteService {
   Future<void> uploadBatchItems(List<Map<String, dynamic>> payload) async {
     if (payload.isEmpty) return;
 
-    // insert bulk
-    await client.from('stock_taking_batch_items').insert(payload);
+    await client
+        .from('stock_taking_batch_items')
+        .upsert(payload, onConflict: 'id');
   }
 }

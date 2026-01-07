@@ -26,6 +26,10 @@ class StockBatchDetailsBlock extends StatelessWidget {
   final TextEditingController qtyController;
   final FocusNode qtyFocusNode;
 
+  // 🔑 Sentinel values
+  static final DateTime _otherExpiry = DateTime(1900, 1, 1);
+  static const String _otherBatch = '__OTHER__';
+
   String _fmt(DateTime d) => '${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   @override
@@ -34,6 +38,20 @@ class StockBatchDetailsBlock extends StatelessWidget {
       builder: (context, state) {
         final bloc = context.read<StockBatchBloc>();
         final product = state.currentProduct;
+
+        final allExpiryOptions = [
+          ...state.expiryOptions,
+          if (state.manualExpiry != null &&
+              !state.expiryOptions.contains(state.manualExpiry))
+            state.manualExpiry!,
+        ];
+
+        final allBatchOptions = [
+          ...state.batchOptions,
+          if (state.manualBatch != null &&
+              !state.batchOptions.contains(state.manualBatch))
+            state.manualBatch!,
+        ];
 
         return Container(
           margin: const EdgeInsets.all(8),
@@ -57,43 +75,68 @@ class StockBatchDetailsBlock extends StatelessWidget {
 
               SizedBox(height: 10.h),
 
-              // ---------------- BATCH FLOW (ANIMATED) ----------------
+              // ---------------- BATCH FLOW ----------------
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 350),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  return SizeTransition(
-                    sizeFactor: animation,
-                    axisAlignment: -1,
-                    child: FadeTransition(opacity: animation, child: child),
-                  );
-                },
                 child: state.isBatch
                     ? Column(
                         key: const ValueKey('batch_on'),
                         children: [
+                          // ---------------- NEAR EXPIRY ----------------
                           DropdownButtonFormField2<DateTime>(
                             value:
-                                state.expiryOptions.contains(
-                                  state.selectedExpiry,
-                                )
+                                allExpiryOptions.contains(state.selectedExpiry)
                                 ? state.selectedExpiry
                                 : null,
-                            items: state.expiryOptions
-                                .map(
-                                  (d) => DropdownMenuItem(
-                                    value: d,
-                                    child: Text(_fmt(d)),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) {
-                              if (v != null) {
+                            items: [
+                              ...allExpiryOptions.map(
+                                (d) => DropdownMenuItem<DateTime>(
+                                  value: d,
+                                  child: Text(_fmt(d)),
+                                ),
+                              ),
+                              DropdownMenuItem<DateTime>(
+                                value: _otherExpiry,
+                                child: const Text(
+                                  'Other (Select manually)',
+                                  style: TextStyle(fontStyle: FontStyle.italic),
+                                ),
+                              ),
+                            ],
+                            onChanged: (v) async {
+                              if (v == null) return;
+
+                              if (v != _otherExpiry) {
                                 bloc.add(
                                   ChangeSelectedExpiryEvent(
                                     itemCode: product!.itemCode,
                                     expiry: v,
+                                    isManual: true,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              // ---- OTHER ----
+                              final picked = await showDatePicker(
+                                context: context,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2100),
+                                initialDate: DateTime.now(),
+                              );
+
+                              if (picked != null) {
+                                final expiry = DateTime(
+                                  picked.year,
+                                  picked.month,
+                                  1,
+                                );
+
+                                bloc.add(
+                                  ChangeSelectedExpiryEvent(
+                                    itemCode: product!.itemCode,
+                                    expiry: expiry,
+                                    isManual: true,
                                   ),
                                 );
                               }
@@ -107,26 +150,73 @@ class StockBatchDetailsBlock extends StatelessWidget {
 
                           SizedBox(height: 10.h),
 
+                          // ---------------- BATCH ----------------
                           DropdownButtonFormField2<String>(
-                            value:
-                                state.batchOptions.contains(state.selectedBatch)
+                            value: allBatchOptions.contains(state.selectedBatch)
                                 ? state.selectedBatch
                                 : null,
-                            items: state.batchOptions
-                                .map(
-                                  (b) => DropdownMenuItem(
-                                    value: b,
-                                    child: Text(b),
+                            items: [
+                              ...allBatchOptions.map(
+                                (b) => DropdownMenuItem<String>(
+                                  value: b,
+                                  child: Text(b),
+                                ),
+                              ),
+                              const DropdownMenuItem<String>(
+                                value: _otherBatch,
+                                child: Text(
+                                  'Other (Enter manually)',
+                                  style: TextStyle(fontStyle: FontStyle.italic),
+                                ),
+                              ),
+                            ],
+                            onChanged: (v) async {
+                              if (v == null) return;
+
+                              if (v != _otherBatch) {
+                                bloc.add(ChangeSelectedBatchEvent(v));
+                                return;
+                              }
+
+                              // ---- OTHER ----
+                              final controller = TextEditingController();
+
+                              final result = await showDialog<String>(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: const Text('Enter Batch'),
+                                  content: TextField(
+                                    controller: controller,
+                                    autofocus: true,
+                                    decoration: const InputDecoration(
+                                      hintText: 'Batch number',
+                                    ),
                                   ),
-                                )
-                                .toList(),
-                            onChanged: state.batchOptions.isEmpty
-                                ? null
-                                : (v) {
-                                    if (v != null) {
-                                      bloc.add(ChangeSelectedBatchEvent(v));
-                                    }
-                                  },
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(
+                                        context,
+                                        controller.text.trim(),
+                                      ),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (result != null && result.isNotEmpty) {
+                                bloc.add(
+                                  ChangeSelectedBatchEvent(
+                                    result,
+                                    isManual: true,
+                                  ),
+                                );
+                              }
+                            },
                             decoration: const InputDecoration(
                               filled: true,
                               fillColor: Colors.white,
@@ -137,7 +227,7 @@ class StockBatchDetailsBlock extends StatelessWidget {
                           SizedBox(height: 10.h),
                         ],
                       )
-                    : const SizedBox(key: ValueKey('batch_off')),
+                    : const SizedBox(),
               ),
 
               // ---------------- UNIT ----------------

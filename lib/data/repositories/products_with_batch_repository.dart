@@ -23,7 +23,7 @@ class ProductsWithBatchRepository {
   final Map<String, List<ProductWithBatchModel>> _byItemCode = {};
 
   // ---------------------------------------------------------------------------
-  // BARCODE NORMALIZATION (🔥 مهم جداً)
+  // BARCODE NORMALIZATION
   // ---------------------------------------------------------------------------
   String _normalizeBarcode(dynamic v) {
     return v.toString().trim().replaceAll(' ', '');
@@ -96,18 +96,12 @@ class ProductsWithBatchRepository {
 
         if (changed.isEmpty) {
           await local.setLastSync(DateTime.now().toUtc().toIso8601String());
-          log('[BatchProducts] delta: no changes');
           return;
         }
 
         await local.saveAll(changed);
         await local.setLastSync(DateTime.now().toUtc().toIso8601String());
         await _reloadCacheFromLocal();
-
-        log(
-          '[BatchProducts] delta saved rows=${changed.length} '
-          'total=${DateTime.now().difference(start).inSeconds}s',
-        );
       } catch (e, st) {
         log('[BatchProducts] Delta sync failed: $e');
         log(st.toString());
@@ -116,9 +110,8 @@ class ProductsWithBatchRepository {
   }
 
   // ---------------------------------------------------------------------------
-  // PUBLIC API (USED BY BLOCS)
+  // PUBLIC API
   // ---------------------------------------------------------------------------
-
   Future<void> ensureLoaded() async {
     if (_loaded) return;
     await _reloadCacheFromLocal();
@@ -126,17 +119,9 @@ class ProductsWithBatchRepository {
 
   ProductWithBatchModel? findByBarcode(String barcode) {
     final key = _normalizeBarcode(barcode);
-
-    log('[BatchProducts] LOOKUP BARCODE = [$key]');
-    log(
-      '[BatchProducts] INDEX SAMPLE = ${_barcodeIndex.keys.take(5).toList()}',
-    );
-
-    if (key.isEmpty) return null;
     return _barcodeIndex[key];
   }
 
-  /// Convert string date safely to DateTime
   DateTime? _parseDate(String? value) {
     if (value == null || value.isEmpty) return null;
     try {
@@ -146,7 +131,6 @@ class ProductsWithBatchRepository {
     }
   }
 
-  /// Near expiry list (DateTime) for product
   List<DateTime> getNearExpiriesForProduct(String itemCode) {
     final rows = _byItemCode[itemCode] ?? [];
     final Map<String, DateTime> uniq = {};
@@ -154,44 +138,30 @@ class ProductsWithBatchRepository {
     for (final r in rows) {
       final dt = _parseDate(r.nearExpiryDate);
       if (dt == null) continue;
-
-      final key = '${dt.year}-${dt.month}-${dt.day}';
-      uniq[key] = DateTime(dt.year, dt.month, dt.day);
+      uniq['${dt.year}-${dt.month}'] = DateTime(dt.year, dt.month, 1);
     }
 
-    final list = uniq.values.toList();
-    list.sort();
+    final list = uniq.values.toList()..sort();
     return list;
   }
 
   List<String> getBatchesForProductAndExpiry(String itemCode, DateTime expiry) {
     final rows = _byItemCode[itemCode] ?? [];
-    final Set<String> uniqueBatches = {};
-
-    bool sameMonth(DateTime a, DateTime b) =>
-        a.year == b.year && a.month == b.month;
+    final Set<String> batches = {};
 
     for (final r in rows) {
-      final DateTime? dt = _parseDate(r.nearExpiryDate);
+      final dt = _parseDate(r.nearExpiryDate);
       if (dt == null) continue;
-      if (!sameMonth(dt, expiry)) continue;
+      if (dt.year != expiry.year || dt.month != expiry.month) continue;
 
-      final List<String> batches = r.batches ?? const [];
-      for (final b in batches) {
-        final v = b.trim();
-        if (v.isNotEmpty) {
-          uniqueBatches.add(v);
-        }
+      for (final b in r.batches ?? []) {
+        if (b.trim().isNotEmpty) batches.add(b.trim());
       }
     }
 
-    final list = uniqueBatches.toList()..sort();
-    return list;
+    return batches.toList()..sort();
   }
 
-  // ---------------------------------------------------------------------------
-  // CACHE BUILDERS
-  // ---------------------------------------------------------------------------
   Future<void> _reloadCacheFromLocal() async {
     final list = await local.loadAll();
     _buildCache(list);
@@ -217,22 +187,38 @@ class ProductsWithBatchRepository {
     _loaded = true;
   }
 
-  // ---------------------------------------------------------------------------
-  // OPTIONAL
-  // ---------------------------------------------------------------------------
-  Future<List<ProductWithBatchModel>> loadCachedProducts() {
-    return local.loadAll();
-  }
-
-  Future<List<ProductWithBatchModel>> searchByItemCode(String code) async {
-    final all = await local.loadAll();
-    return all.where((p) => p.itemCode == code).toList();
+  /// ✅ Get product rows by itemCode
+  /// (same product can repeat by expiry / batch)
+  List<ProductWithBatchModel> getByItemCode(String itemCode) {
+    return _byItemCode[itemCode] ?? const [];
   }
 
   List<String> getUnitsForProduct(ProductWithBatchModel product) {
-    if (product.units.isNotEmpty) {
-      return product.units;
+    return product.units.isNotEmpty ? product.units : const ['BOX'];
+  }
+
+  /// ✅ Search suggestions UNIQUE by itemCode (no duplicates in UI)
+  /// ✅ Search products UNIQUE by itemCode (for search UI only)
+  List<ProductWithBatchModel> searchUniqueByQuery(String query) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return const [];
+
+    final Map<String, ProductWithBatchModel> unique = {};
+
+    for (final p in _cache) {
+      final match =
+          p.itemName.toLowerCase().contains(q) ||
+          p.itemCode.toLowerCase().contains(q) ||
+          p.barcodes.any(
+            (b) => _normalizeBarcode(b).contains(_normalizeBarcode(q)),
+          );
+
+      if (!match) continue;
+
+      // keep only ONE row per itemCode
+      unique.putIfAbsent(p.itemCode, () => p);
     }
-    return const ['BOX'];
+
+    return unique.values.toList();
   }
 }

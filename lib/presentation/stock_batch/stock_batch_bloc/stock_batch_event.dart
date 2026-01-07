@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../../data/model/product_with_batch_model.dart';
+import '../../../data/model/stock_batch_group.dart';
 
 // ---------------------------------------------------------------------------
 // BASE
@@ -58,22 +59,26 @@ class ProductChosenFromSearchEvent extends StockBatchEvent {
 class ChangeSelectedExpiryEvent extends StockBatchEvent {
   final String itemCode;
   final DateTime expiry;
+  final bool isManual;
 
   const ChangeSelectedExpiryEvent({
     required this.itemCode,
     required this.expiry,
+    this.isManual = false,
   });
 
   @override
-  List<Object?> get props => [itemCode, expiry];
+  List<Object?> get props => [itemCode, expiry, isManual];
 }
 
 class ChangeSelectedBatchEvent extends StockBatchEvent {
   final String batch;
-  const ChangeSelectedBatchEvent(this.batch);
+  final bool isManual;
+
+  const ChangeSelectedBatchEvent(this.batch, {this.isManual = false});
 
   @override
-  List<Object?> get props => [batch];
+  List<Object?> get props => [batch, isManual];
 }
 
 class ChangeUnitEvent extends StockBatchEvent {
@@ -106,14 +111,17 @@ class ApproveBatchItemEvent extends StockBatchEvent {
   List<Object?> get props => [projectId, projectName, barcode, unit, qty];
 }
 
-class DeleteBatchItemEvent extends StockBatchEvent {
-  final String id;
+class DeleteStockBatchGroupEvent extends StockBatchEvent {
   final String projectId;
+  final StockBatchGroup group;
 
-  const DeleteBatchItemEvent({required this.id, required this.projectId});
+  const DeleteStockBatchGroupEvent({
+    required this.projectId,
+    required this.group,
+  });
 
   @override
-  List<Object?> get props => [id, projectId];
+  List<Object?> get props => [projectId, group];
 }
 
 // ---------------------------------------------------------------------------
@@ -156,4 +164,34 @@ class UploadStockBatchEvent extends StockBatchEvent {
 
   @override
   List<Object?> get props => [projectId];
+}
+
+// EDIT
+
+class UpdateStockBatchItemEvent extends StockBatchEvent {
+  final String projectId;
+  final StockBatchGroup group;
+
+  /// unit -> qty (Box / Strip / ...)
+  final Map<String, double> newUnitQty;
+
+  final DateTime? newExpiry;
+  final String? newBatch;
+
+  const UpdateStockBatchItemEvent({
+    required this.projectId,
+    required this.group,
+    required this.newUnitQty,
+    required this.newExpiry,
+    required this.newBatch,
+  });
+
+  @override
+  List<Object?> get props => [
+    projectId,
+    group,
+    newUnitQty,
+    newExpiry,
+    newBatch,
+  ];
 }

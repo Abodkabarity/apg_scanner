@@ -64,16 +64,16 @@ class StockBatchRepository {
       projectId: projectId,
       projectName: projectName,
       branchName: branchName,
-
       itemCode: product.itemCode,
       itemName: product.itemName,
       barcode: barcode,
-
       unitType: unit,
       quantity: qty,
-
       nearExpiry: expiry,
       batch: batch,
+      subUnitQty: product.subunitQty == null
+          ? null
+          : (product.subunitQty as num).toDouble(),
 
       isSynced: false,
       isDeleted: false,
@@ -106,39 +106,74 @@ class StockBatchRepository {
   // ---------------------------------------------------------------------------
   // SYNC UP (UPLOAD)
   // ---------------------------------------------------------------------------
-  Future<void> syncUp(String projectId) async {
+  Future<bool> syncUp(String projectId) async {
     final items = await loadItems(projectId);
 
-    final toUpload = items.where((e) => !e.isDeleted && !e.isSynced).toList();
-    if (toUpload.isEmpty) return;
+    final pending = items.where((e) => !e.isDeleted && !e.isSynced).toList();
 
-    final payload = toUpload.map((e) {
-      return {
-        'id': e.id, // نرفع نفس id
-        'project_id': e.projectId,
-        'project_name': e.projectName,
-        'branch_name': e.branchName.isEmpty ? session.branch : e.branchName,
+    if (pending.isEmpty) {
+      return false;
+    }
 
-        'item_code': e.itemCode,
-        'item_name': e.itemName,
-        'barcode': e.barcode,
+    final Map<String, List<StockBatchItemModel>> grouped = {};
 
-        'unit': e.unitType,
-        'qty': e.quantity,
+    for (final item in pending) {
+      final key = '${item.itemCode}__${item.batch ?? '-'}';
+      grouped.putIfAbsent(key, () => []);
+      grouped[key]!.add(item);
+    }
 
-        'near_expiry': e.nearExpiry?.toIso8601String(),
-        'batch': e.batch,
+    final List<Map<String, dynamic>> payload = [];
 
-        'created_at': e.createdAt.toUtc().toIso8601String(),
-      };
-    }).toList();
+    for (final entry in grouped.entries) {
+      final rows = entry.value;
+      final first = rows.first;
+
+      double totalQty = 0;
+
+      for (final r in rows) {
+        if (r.unitType.toUpperCase() == 'BOX') {
+          totalQty += r.quantity;
+        } else {
+          final sub = (r.subUnitQty ?? 1);
+          if (sub <= 0) {
+            totalQty += r.quantity;
+          } else {
+            totalQty += (r.quantity / sub);
+          }
+        }
+      }
+
+      payload.add({
+        'id': first.id,
+
+        'project_id': first.projectId,
+        'project_name': first.projectName,
+        'branch_name': first.branchName.isEmpty
+            ? session.branch
+            : first.branchName,
+
+        'item_code': first.itemCode,
+        'item_name': first.itemName,
+        'barcode': first.barcode,
+
+        'unit': 'BOX',
+        'qty': totalQty,
+
+        'near_expiry': first.nearExpiry?.toIso8601String(),
+        'batch': first.batch,
+
+        'created_at': first.createdAt.toUtc().toIso8601String(),
+      });
+    }
 
     await remote.uploadBatchItems(payload);
 
-    // mark synced
-    for (final item in toUpload) {
+    for (final item in pending) {
       await local.updateItem(item.copyWith(isSynced: true));
     }
+
+    return true;
   }
 
   // ---------------------------------------------------------------------------
@@ -148,11 +183,13 @@ class StockBatchRepository {
     return local.clearProject(projectId);
   }
 
+  // ---------------------------------------------------------------------------
+  // EXCEL EXPORT
+  // ---------------------------------------------------------------------------
   Future<List<Map<String, dynamic>>> buildStockBatchExcelData({
     required String projectId,
   }) async {
     final items = await loadItems(projectId);
-
     final visible = items.where((e) => !e.isDeleted).toList();
 
     if (visible.isEmpty) return [];
@@ -172,5 +209,41 @@ class StockBatchRepository {
         'Created At': e.createdAt.toIso8601String(),
       };
     }).toList();
+  }
+
+  Future<void> updateFullItem({required StockBatchItemModel item}) async {
+    await local.updateItem(item.copyWith(isSynced: false));
+  }
+
+  Future<void> addManualRow({
+    required String projectId,
+    required String projectName,
+    required String branchName,
+    required String itemCode,
+    required String itemName,
+    required String barcode,
+    required String unitType,
+    required double qty,
+    required DateTime? nearExpiry,
+    required String? batch,
+  }) async {
+    final item = StockBatchItemModel(
+      id: const Uuid().v4(),
+      projectId: projectId,
+      projectName: projectName,
+      branchName: branchName,
+      itemCode: itemCode,
+      itemName: itemName,
+      barcode: barcode,
+      unitType: unitType,
+      quantity: qty,
+      nearExpiry: nearExpiry,
+      batch: batch,
+      isSynced: false,
+      isDeleted: false,
+      createdAt: DateTime.now(),
+    );
+
+    await local.saveItem(item);
   }
 }

@@ -10,6 +10,7 @@ class StockBatchGroup extends Equatable {
 
   final double totalQty;
   final DateTime latestCreatedAt;
+  final Map<String, double> unitQty;
 
   const StockBatchGroup({
     required this.itemCode,
@@ -19,6 +20,7 @@ class StockBatchGroup extends Equatable {
     required this.nearExpiry,
     required this.totalQty,
     required this.latestCreatedAt,
+    required this.unitQty,
   });
 
   @override
@@ -30,5 +32,6 @@ class StockBatchGroup extends Equatable {
     nearExpiry,
     totalQty,
     latestCreatedAt,
+    unitQty,
   ];
 }
