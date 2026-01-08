@@ -11,7 +11,7 @@ import '../../../data/services/products_sync_service.dart';
 import '../../select_project/select_project_page.dart';
 import '../login_block/login_bloc.dart';
 import '../login_block/login_event.dart';
-import '../login_page.dart';
+import '../login_byname_page.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -144,7 +144,8 @@ class _AuthGateState extends State<AuthGate> {
         /// 🔐 Not logged in
         return BlocProvider.value(
           value: context.read<LoginBloc>()..add(LoginPageOpened()),
-          child: LoginPage(),
+          /*  child: LoginPage(),*/
+          child: LoginByNamePage(),
         );
       },
     );

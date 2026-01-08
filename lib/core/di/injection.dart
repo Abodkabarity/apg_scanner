@@ -14,6 +14,7 @@ import '../../data/repositories/product_unit_repository.dart';
 import '../../data/repositories/products_repository.dart';
 import '../../data/repositories/products_with_batch_repository.dart';
 import '../../data/repositories/project_repository.dart';
+import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/stock_batch_repository.dart';
 import '../../data/repositories/stock_taking_repository.dart';
 import '../../data/services/connectivity_service.dart';
@@ -44,6 +45,8 @@ void setupGetIt() {
   getIt.registerLazySingleton<AuthRepository>(
     () => AuthRepository(getIt<AuthService>()),
   );
+  getIt.registerLazySingleton<SessionRepository>(() => SessionRepository());
+
   getIt.registerLazySingleton<UserSession>(() => UserSession());
 
   // Local storage

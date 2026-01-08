@@ -23,3 +23,11 @@ class ChangeObscureStatusEvent extends LoginEvent {
 class LoginNavConsumed extends LoginEvent {}
 
 class LoginPageOpened extends LoginEvent {}
+
+class NameLoginSubmitted extends LoginEvent {
+  final String name;
+  NameLoginSubmitted(this.name);
+
+  @override
+  List<Object?> get props => [name];
+}
