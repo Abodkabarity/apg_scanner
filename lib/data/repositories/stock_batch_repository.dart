@@ -109,7 +109,7 @@ class StockBatchRepository {
   Future<bool> syncUp(String projectId) async {
     final items = await loadItems(projectId);
 
-    final pending = items.where((e) => !e.isDeleted && !e.isSynced).toList();
+    final pending = items.where((e) => !e.isSynced).toList();
 
     if (pending.isEmpty) {
       return false;
@@ -156,6 +156,7 @@ class StockBatchRepository {
         'item_code': first.itemCode,
         'item_name': first.itemName,
         'barcode': first.barcode,
+        'is_deleted': first.isDeleted,
 
         'unit': 'BOX',
         'qty': totalQty,

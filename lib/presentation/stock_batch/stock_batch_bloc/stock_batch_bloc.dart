@@ -266,10 +266,11 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
 
         batchOptions: const [],
         selectedBatch: null,
+        manualBatch: null,
 
         units: const [],
         selectedUnit: null,
-
+        manualExpiry: null,
         suggestions: const [],
         success: "Item saved successfully",
         resetForm: true,
@@ -285,7 +286,6 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
   ) async {
     emit(state.copyWith(loading: true));
 
-    // كل العناصر التي تنتمي لهذا group
     final itemsToDelete = state.items
         .where(
           (e) =>
@@ -343,10 +343,10 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
 
         expiryOptions: const [],
         selectedExpiry: null,
-
+        manualExpiry: null,
         batchOptions: const [],
         selectedBatch: null,
-
+        manualBatch: null,
         units: const [],
         selectedUnit: null,
 

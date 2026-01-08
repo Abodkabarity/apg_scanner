@@ -96,6 +96,9 @@ class StockBatchDetailsBlock extends StatelessWidget {
                                 ),
                               ),
                               DropdownMenuItem<DateTime>(
+                                key: ValueKey(
+                                  '${state.currentProduct?.itemCode ?? 'no_product'}_expiry',
+                                ),
                                 value: _otherExpiry,
                                 child: const Text(
                                   'Other (Select manually)',
@@ -152,6 +155,9 @@ class StockBatchDetailsBlock extends StatelessWidget {
 
                           // ---------------- BATCH ----------------
                           DropdownButtonFormField2<String>(
+                            key: ValueKey(
+                              '${state.currentProduct?.itemCode ?? 'no_product'}_batch',
+                            ),
                             value: allBatchOptions.contains(state.selectedBatch)
                                 ? state.selectedBatch
                                 : null,
@@ -172,9 +178,12 @@ class StockBatchDetailsBlock extends StatelessWidget {
                             ],
                             onChanged: (v) async {
                               if (v == null) return;
+                              final focusScope = FocusScope.of(context);
 
                               if (v != _otherBatch) {
                                 bloc.add(ChangeSelectedBatchEvent(v));
+                                focusScope.requestFocus(qtyFocusNode);
+
                                 return;
                               }
 
@@ -215,6 +224,7 @@ class StockBatchDetailsBlock extends StatelessWidget {
                                     isManual: true,
                                   ),
                                 );
+                                focusScope.requestFocus(qtyFocusNode);
                               }
                             },
                             decoration: const InputDecoration(
@@ -331,7 +341,6 @@ class StockBatchDetailsBlock extends StatelessWidget {
                       );
                       return;
                     }
-
                     bloc.add(
                       ApproveBatchItemEvent(
                         projectId: project.id.toString(),

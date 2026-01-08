@@ -8,6 +8,11 @@ enum SnackType { success, info, error }
 
 class StockBatchState extends Equatable {
   // ---------------------------------------------------------------------------
+  // INTERNAL (for nullable reset)
+  // ---------------------------------------------------------------------------
+  static const Object _unset = Object();
+
+  // ---------------------------------------------------------------------------
   // UI STATUS
   // ---------------------------------------------------------------------------
   final bool loading;
@@ -25,7 +30,7 @@ class StockBatchState extends Equatable {
   // CURRENT PRODUCT
   // ---------------------------------------------------------------------------
   final ProductWithBatchModel? currentProduct;
-  bool get isBatch => currentProduct?.isBatch ?? false;
+  bool get isBatch => currentProduct?.isBatch ?? true;
 
   // ---------------------------------------------------------------------------
   // EXPIRY / BATCH (FOR BATCH PRODUCTS)
@@ -88,30 +93,29 @@ class StockBatchState extends Equatable {
     this.manualExpiry,
     this.manualBatch,
   });
+
   // ---------------------------------------------------------------------------
   // SYNC STATUS
   // ---------------------------------------------------------------------------
   bool get hasUnsyncedItems => items.any((e) => !e.isSynced && !e.isDeleted);
 
-  // ---------------------------------------------------------------------------
-  // COPY
-  // ---------------------------------------------------------------------------
   StockBatchState copyWith({
     bool? loading,
     List<StockBatchItemModel>? items,
     List<StockBatchGroup>? groupedItems,
     List<StockBatchGroup>? filteredGroupedItems,
-    DateTime? manualExpiry,
-    String? manualBatch,
+
+    Object? manualExpiry = _unset,
+    Object? manualBatch = _unset,
 
     ProductWithBatchModel? currentProduct,
     bool clearCurrentProduct = false,
 
     List<DateTime>? expiryOptions,
-    DateTime? selectedExpiry,
+    Object? selectedExpiry = _unset,
 
     List<String>? batchOptions,
-    String? selectedBatch,
+    Object? selectedBatch = _unset,
     SnackType? snackType,
 
     List<String>? units,
@@ -139,15 +143,25 @@ class StockBatchState extends Equatable {
           : currentProduct ?? this.currentProduct,
 
       expiryOptions: expiryOptions ?? this.expiryOptions,
-      selectedExpiry: selectedExpiry ?? this.selectedExpiry,
-      snackType: snackType ?? this.snackType,
+      selectedExpiry: selectedExpiry == _unset
+          ? this.selectedExpiry
+          : selectedExpiry as DateTime?,
 
       batchOptions: batchOptions ?? this.batchOptions,
+      selectedBatch: selectedBatch == _unset
+          ? this.selectedBatch
+          : selectedBatch as String?,
 
       units: units ?? this.units,
       selectedUnit: selectedUnit ?? this.selectedUnit,
-      manualExpiry: manualExpiry ?? this.manualExpiry,
-      manualBatch: manualBatch ?? this.manualBatch,
+
+      manualExpiry: manualExpiry == _unset
+          ? this.manualExpiry
+          : manualExpiry as DateTime?,
+
+      manualBatch: manualBatch == _unset
+          ? this.manualBatch
+          : manualBatch as String?,
 
       suggestions: suggestions ?? this.suggestions,
       scannedBarcode: scannedBarcode ?? this.scannedBarcode,
@@ -156,6 +170,7 @@ class StockBatchState extends Equatable {
       success: clearSuccess ? null : success ?? this.success,
 
       resetForm: resetForm ?? false,
+      snackType: snackType ?? this.snackType,
     );
   }
 
@@ -179,10 +194,13 @@ class StockBatchState extends Equatable {
 
     units,
     selectedUnit,
+
+    manualExpiry,
     manualBatch,
+
     suggestions,
     scannedBarcode,
-    manualExpiry,
+
     error,
     success,
     snackType,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 class UserSession extends ChangeNotifier {
   String? userId;
@@ -10,6 +11,9 @@ class UserSession extends ChangeNotifier {
 
   bool isReady = false;
 
+  final _uuid = const Uuid();
+
+  // ---------------- NORMAL LOGIN ----------------
   void setUser({
     required String userId,
     required String email,
@@ -26,11 +30,13 @@ class UserSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---------------- NAME LOGIN ----------------
   void setTempUser({required String name, required String sessionId}) {
     tempName = name;
     tempSessionId = sessionId;
 
-    userId = null;
+    userId = 'scanner_device';
+
     email = null;
     branch = null;
 
@@ -39,22 +45,14 @@ class UserSession extends ChangeNotifier {
   }
 
   bool get isTempUser => tempSessionId != null;
-  bool get isAuthUser => userId != null;
-
-  String get displayName {
-    if (isAuthUser) return email ?? 'User';
-    if (isTempUser) return tempName ?? 'Guest';
-    return 'Guest';
-  }
+  bool get isAuthUser => email != null;
 
   void clear() {
     userId = null;
     email = null;
     branch = null;
-
     tempName = null;
     tempSessionId = null;
-
     isReady = false;
     notifyListeners();
   }
