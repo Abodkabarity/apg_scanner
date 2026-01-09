@@ -12,10 +12,10 @@ void showTopSnackBar(
 
   final entry = OverlayEntry(
     builder: (context) => Positioned(
-      //top: MediaQuery.of(context).padding.top + 12.h,
+      top: MediaQuery.of(context).padding.top + 12.h,
       left: 16.w,
       right: 16.w,
-      bottom: MediaQuery.of(context).padding.top + 30.h,
+      //bottom: MediaQuery.of(context).padding.top + 30.h,
       child: Material(
         color: Colors.transparent,
         child: _TopSnackBar(

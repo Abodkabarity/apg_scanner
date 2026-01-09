@@ -33,7 +33,7 @@ class StockBatchPage extends StatelessWidget {
       listeners: [
         // SUCCESS
         BlocListener<StockBatchBloc, StockBatchState>(
-          listenWhen: (p, c) => p.success != c.success || p.error != c.error,
+          listenWhen: (p, c) => p.snackId != c.snackId,
           listener: (context, state) {
             final message = state.error ?? state.success;
             if (message == null) return;
@@ -66,7 +66,6 @@ class StockBatchPage extends StatelessWidget {
 
             if (type == SnackType.success) {
               nameController.clear();
-              scanController.clear();
               qtyController.clear();
               FocusScope.of(context).requestFocus(scanFocusNode);
 
@@ -77,7 +76,7 @@ class StockBatchPage extends StatelessWidget {
 
         // SCANNED BARCODE
         BlocListener<StockBatchBloc, StockBatchState>(
-          listenWhen: (p, c) => p.scannedBarcode != c.scannedBarcode,
+          listenWhen: (p, c) => p.scanId != c.scanId,
           listener: (context, state) {
             if (state.scannedBarcode != null) {
               scanController.text = state.scannedBarcode!;
@@ -90,6 +89,22 @@ class StockBatchPage extends StatelessWidget {
               nameController.text = state.currentProduct!.itemName;
             } else {
               nameController.clear();
+            }
+          },
+        ),
+        BlocListener<StockBatchBloc, StockBatchState>(
+          listenWhen: (p, c) => p.autoFocusScan != c.autoFocusScan,
+          listener: (context, state) {
+            if (state.autoFocusScan && state.currentProduct == null) {
+              scanController.clear();
+              nameController.clear();
+              qtyController.clear();
+
+              FocusScope.of(context).requestFocus(scanFocusNode);
+
+              context.read<StockBatchBloc>().add(
+                const ResetAutoFocusScanEvent(),
+              );
             }
           },
         ),
@@ -513,7 +528,7 @@ class StockBatchPage extends StatelessWidget {
 
                   if (state.isProcessing)
                     Container(
-                      color: Colors.black.withOpacity(0.45),
+                      color: Colors.black.withValues(alpha: 0.45),
                       child: Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,

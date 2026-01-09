@@ -24,6 +24,9 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     on<ApproveBatchItemEvent>(_onApprove);
     on<DeleteStockBatchGroupEvent>(_onDeleteGroup);
     on<ConfirmDiscardOrSaveEvent>(_onConfirmDiscardOrSave);
+    on<ResetAutoFocusQtyEvent>((event, emit) {
+      emit(state.copyWith(autoFocusQty: false));
+    });
 
     on<SearchBatchQueryChanged>(_onSearch);
     on<ResetBatchFormEvent>(_onReset);
@@ -33,6 +36,9 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     on<SendStockBatchByEmailEvent>(_onSendByEmail);
     on<UploadStockBatchEvent>(_onUpload);
     on<UpdateStockBatchItemEvent>(_onUpdateItem);
+    on<ResetAutoFocusScanEvent>((event, emit) {
+      emit(state.copyWith(autoFocusScan: false));
+    });
   }
   final exportService = getIt<StockBatchExportService>();
 
@@ -67,7 +73,14 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     ScanBatchBarcodeEvent event,
     Emitter<StockBatchState> emit,
   ) async {
-    emit(state.copyWith(loading: true, clearError: true));
+    emit(
+      state.copyWith(
+        loading: true,
+        error: null,
+        success: null,
+        snackType: null,
+      ),
+    );
 
     await productsRepo.ensureLoaded();
     print('SCANNED BARCODE = [${event.barcode}]');
@@ -75,7 +88,19 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     final product = productsRepo.findByBarcode(event.barcode);
 
     if (product == null) {
-      emit(state.copyWith(loading: false, error: "Item not found"));
+      emit(
+        state.copyWith(
+          loading: false,
+          error: "Item not found",
+          scannedBarcode: null,
+          currentProduct: null,
+          snackType: SnackType.error,
+          success: null,
+          snackId: state.snackId + 1,
+
+          autoFocusScan: true,
+        ),
+      );
       return;
     }
 
@@ -97,8 +122,11 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
 
           units: units,
           selectedUnit: units.isNotEmpty ? units.first : null,
+          autoFocusQty: true,
 
           scannedBarcode: event.barcode,
+          scanId: state.scanId + 1,
+
           clearError: true,
         ),
       );
@@ -139,6 +167,7 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         autoFocusQty: batchOptions.length == 1,
 
         scannedBarcode: event.barcode,
+        scanId: state.scanId + 1,
         clearError: true,
       ),
     );
@@ -265,12 +294,14 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
 
         expiryOptions: const [],
         selectedExpiry: null,
+        snackId: state.snackId + 1,
 
         batchOptions: const [],
         selectedBatch: null,
         manualBatch: null,
         hasPendingItem: false,
-
+        snackType: SnackType.success,
+        error: null,
         units: const [],
         selectedUnit: null,
         manualExpiry: null,
@@ -460,6 +491,7 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         batchOptions: product.isBatch ? batchOptions : const [],
         selectedBatch: null,
         hasPendingItem: true, // ✅
+        autoFocusQty: !product.isBatch,
 
         units: units,
         selectedUnit: units.isNotEmpty ? units.first : null,
@@ -498,6 +530,8 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
           isProcessing: false,
           processingMessage: null,
           snackType: SnackType.success,
+          snackId: state.snackId + 1,
+
           success: "Stock Batch Excel saved successfully",
         ),
       );
@@ -537,6 +571,8 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         state.copyWith(
           isProcessing: false,
           processingMessage: null,
+          snackId: state.snackId + 1,
+
           success: "Stock Batch report sent to ${session.email}",
         ),
       );
@@ -545,6 +581,8 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         state.copyWith(
           isProcessing: false,
           processingMessage: null,
+          snackId: state.snackId + 1,
+
           error: e.toString(),
         ),
       );
@@ -556,19 +594,26 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     Emitter<StockBatchState> emit,
   ) async {
     try {
-      emit(state.copyWith(loading: true, clearError: true, clearSuccess: true));
+      emit(
+        state.copyWith(
+          isProcessing: true,
+          processingMessage: "Uploading stock batch...",
+          clearError: true,
+          clearSuccess: true,
+        ),
+      );
 
       final hasUploaded = await repo.syncUp(event.projectId);
-
       final items = await repo.loadItems(event.projectId);
 
       if (!hasUploaded) {
         emit(
           state.copyWith(
-            loading: false,
+            isProcessing: false,
+            processingMessage: null,
             items: items,
-            snackType: SnackType.info, // ✅ هنا
-
+            snackType: SnackType.info,
+            snackId: state.snackId + 1,
             success: "No changes to upload",
           ),
         );
@@ -577,19 +622,22 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
 
       emit(
         state.copyWith(
-          loading: false,
+          isProcessing: false,
+          processingMessage: null,
           items: items,
-          snackType: SnackType.success, // ✅ هنا
-
+          snackType: SnackType.success,
+          snackId: state.snackId + 1,
           success: "Stock Batch uploaded successfully",
         ),
       );
     } catch (e) {
       emit(
         state.copyWith(
-          loading: false,
-          error: e.toString(),
+          isProcessing: false,
+          processingMessage: null,
           snackType: SnackType.error,
+          snackId: state.snackId + 1,
+          error: e.toString(),
         ),
       );
     }
@@ -628,7 +676,7 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
               quantity: qty,
               nearExpiry: event.newExpiry,
               batch: event.newBatch ?? r.batch,
-              subUnitQty: r.subUnitQty, // ✅ لا تفقدها
+              subUnitQty: r.subUnitQty,
               isSynced: false,
             ),
             qty: qty,
@@ -662,6 +710,7 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         items: refreshed,
         groupedItems: groups,
         filteredGroupedItems: groups,
+        snackId: state.snackId + 1,
         success: "Item updated successfully",
       ),
     );

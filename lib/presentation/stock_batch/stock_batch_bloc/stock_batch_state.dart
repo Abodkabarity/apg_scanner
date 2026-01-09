@@ -18,6 +18,7 @@ class StockBatchState extends Equatable {
   final bool loading;
   final bool isProcessing;
   final String? processingMessage;
+  final bool autoFocusScan;
 
   // ---------------------------------------------------------------------------
   // STORED ITEMS
@@ -45,12 +46,14 @@ class StockBatchState extends Equatable {
   final String? selectedBatch;
   final SnackType? snackType;
   final bool autoFocusQty;
+  final int snackId;
 
   // ---------------------------------------------------------------------------
   // UNIT / QTY
   // ---------------------------------------------------------------------------
   final List<String> units;
   final String? selectedUnit;
+  final int scanId;
 
   // ---------------------------------------------------------------------------
   // SEARCH / SCAN
@@ -76,7 +79,8 @@ class StockBatchState extends Equatable {
     this.filteredGroupedItems = const [],
     this.autoFocusQty = false,
     this.hasPendingItem = false,
-
+    this.autoFocusScan = false,
+    this.snackId = 0,
     this.currentProduct,
 
     this.expiryOptions = const [],
@@ -84,6 +88,7 @@ class StockBatchState extends Equatable {
 
     this.batchOptions = const [],
     this.selectedBatch,
+    this.scanId = 0,
 
     this.units = const [],
     this.selectedUnit,
@@ -120,9 +125,10 @@ class StockBatchState extends Equatable {
     bool clearCurrentProduct = false,
     bool? isProcessing,
     String? processingMessage,
-
+    int? scanId,
     List<DateTime>? expiryOptions,
     Object? selectedExpiry = _unset,
+    bool? autoFocusScan,
 
     List<String>? batchOptions,
     Object? selectedBatch = _unset,
@@ -137,6 +143,7 @@ class StockBatchState extends Equatable {
 
     String? error,
     String? success,
+    int? snackId,
 
     bool? resetForm,
     bool clearError = false,
@@ -171,6 +178,7 @@ class StockBatchState extends Equatable {
       manualExpiry: manualExpiry == _unset
           ? this.manualExpiry
           : manualExpiry as DateTime?,
+      snackId: snackId ?? this.snackId,
 
       manualBatch: manualBatch == _unset
           ? this.manualBatch
@@ -182,6 +190,8 @@ class StockBatchState extends Equatable {
       error: clearError ? null : error ?? this.error,
       success: clearSuccess ? null : success ?? this.success,
       hasPendingItem: hasPendingItem ?? this.hasPendingItem,
+      autoFocusScan: autoFocusScan ?? this.autoFocusScan,
+      scanId: scanId ?? this.scanId,
 
       resetForm: resetForm ?? false,
       snackType: snackType ?? this.snackType,
@@ -208,10 +218,10 @@ class StockBatchState extends Equatable {
 
     units,
     selectedUnit,
-
+    scanId,
     manualExpiry,
     manualBatch,
-
+    autoFocusScan,
     suggestions,
     scannedBarcode,
     isProcessing,
@@ -222,5 +232,6 @@ class StockBatchState extends Equatable {
     resetForm,
     autoFocusQty,
     hasPendingItem,
+    snackId,
   ];
 }

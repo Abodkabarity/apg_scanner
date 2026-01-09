@@ -216,3 +216,11 @@ class ConfirmDiscardOrSaveEvent extends StockBatchEvent {
     this.nextBarcode,
   });
 }
+
+class ResetAutoFocusQtyEvent extends StockBatchEvent {
+  const ResetAutoFocusQtyEvent();
+}
+
+class ResetAutoFocusScanEvent extends StockBatchEvent {
+  const ResetAutoFocusScanEvent();
+}

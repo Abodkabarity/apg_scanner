@@ -44,6 +44,7 @@ class StockBatchDetailsBlock extends StatelessWidget {
       listener: (context, state) {
         if (state.autoFocusQty) {
           FocusScope.of(context).requestFocus(qtyFocusNode);
+          context.read<StockBatchBloc>().add(const ResetAutoFocusQtyEvent());
         }
       },
       child: BlocBuilder<StockBatchBloc, StockBatchState>(
@@ -506,6 +507,7 @@ class StockBatchDetailsBlock extends StatelessWidget {
                           }
 
                           FocusScope.of(context).unfocus();
+                          qtyController.clear();
 
                           bloc.add(
                             ApproveBatchItemEvent(
@@ -609,6 +611,8 @@ class StockBatchDetailsBlock extends StatelessWidget {
                         );
                         return;
                       }
+                      qtyController.clear();
+
                       bloc.add(
                         ApproveBatchItemEvent(
                           projectId: project.id.toString(),
