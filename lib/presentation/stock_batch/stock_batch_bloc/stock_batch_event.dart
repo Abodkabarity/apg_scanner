@@ -195,3 +195,24 @@ class UpdateStockBatchItemEvent extends StockBatchEvent {
     newBatch,
   ];
 }
+
+class ConfirmDiscardOrSaveEvent extends StockBatchEvent {
+  final bool saveBeforeContinue;
+  final String? nextBarcode;
+
+  final String projectId;
+  final String projectName;
+  final double qty;
+  final String barcode;
+  final String unit;
+
+  const ConfirmDiscardOrSaveEvent({
+    required this.saveBeforeContinue,
+    required this.projectId,
+    required this.projectName,
+    required this.qty,
+    required this.barcode,
+    required this.unit,
+    this.nextBarcode,
+  });
+}

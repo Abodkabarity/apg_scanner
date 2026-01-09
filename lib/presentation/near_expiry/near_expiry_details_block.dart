@@ -1,6 +1,7 @@
 import 'package:apg_scanner/data/model/project_model.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -140,6 +141,8 @@ class NearExpiryDetailsBlock extends StatelessWidget {
                     child: TextField(
                       controller: qtyController,
                       focusNode: qtyFocusNode,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: "Quantity",

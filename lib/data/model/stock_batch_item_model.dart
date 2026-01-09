@@ -112,9 +112,9 @@ class StockBatchItemModel {
       itemName: (json['item_name'] ?? '').toString(),
       barcode: (json['barcode'] ?? '').toString(),
       unitType: (json['unit'] ?? json['unit_type'] ?? '').toString(),
-      quantity: (json['qty'] is num)
-          ? (json['qty'] as num).toDouble()
-          : double.tryParse((json['qty'] ?? '0').toString()) ?? 0.0,
+      quantity:
+          double.tryParse((json['qty'] ?? 0).toString().split('.').first) ?? 0,
+
       subUnitQty: (json['sub_unit_qty'] is num)
           ? (json['sub_unit_qty'] as num).toDouble()
           : double.tryParse('${json['sub_unit_qty']}'),

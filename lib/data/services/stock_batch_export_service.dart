@@ -19,7 +19,7 @@ class StockBatchExportService {
     required String projectId,
     required String projectName,
   }) async {
-    final data = await repo.buildStockBatchExcelData(projectId: projectId);
+    final data = await repo.loadExcelDataFromSupabase(projectId: projectId);
 
     if (data.isEmpty) {
       throw Exception('No data to export');
@@ -42,7 +42,7 @@ class StockBatchExportService {
     required String projectId,
     required String projectName,
   }) async {
-    final data = await repo.buildStockBatchExcelData(projectId: projectId);
+    final data = await repo.loadExcelDataFromSupabase(projectId: projectId);
 
     if (data.isEmpty) {
       throw Exception('No data to share');
@@ -74,7 +74,7 @@ class StockBatchExportService {
     required String projectName,
     required String toEmail,
   }) async {
-    final data = await repo.buildStockBatchExcelData(projectId: projectId);
+    final data = await repo.loadExcelDataFromSupabase(projectId: projectId);
 
     if (data.isEmpty) {
       throw Exception('No data to send');

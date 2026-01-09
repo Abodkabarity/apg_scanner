@@ -1,3 +1,4 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/session/user_session.dart';
@@ -195,21 +196,54 @@ class StockBatchRepository {
 
     if (visible.isEmpty) return [];
 
-    return visible.map((e) {
-      return {
-        'Branch': e.branchName,
-        'Item Code': e.itemCode,
-        'Item Name': e.itemName,
-        'Barcode': e.barcode,
-        'Unit': e.unitType,
-        'Quantity': e.quantity,
-        'Near Expiry': e.nearExpiry != null
-            ? e.nearExpiry!.toIso8601String()
+    final Map<String, List<StockBatchItemModel>> grouped = {};
+
+    for (final it in visible) {
+      final key = '${it.itemCode}__${it.batch ?? '-'}';
+      grouped.putIfAbsent(key, () => []);
+      grouped[key]!.add(it);
+    }
+
+    final List<Map<String, dynamic>> result = [];
+
+    for (final entry in grouped.entries) {
+      final rows = entry.value;
+      final first = rows.first;
+
+      double totalQty = 0;
+      final Map<String, double> unitQty = {};
+
+      for (final r in rows) {
+        unitQty[r.unitType] = (unitQty[r.unitType] ?? 0) + r.quantity;
+
+        if (r.unitType.toUpperCase() == 'BOX') {
+          totalQty += r.quantity;
+        } else {
+          final sub = r.subUnitQty ?? 1;
+          if (sub > 0) {
+            totalQty += r.quantity / sub;
+          }
+        }
+      }
+
+      result.add({
+        'Branch': first.branchName,
+        'Item Code': first.itemCode,
+        'Item Name': first.itemName,
+        'Barcode': first.barcode,
+        'Batch': first.batch ?? '',
+        'Near Expiry': first.nearExpiry != null
+            ? first.nearExpiry!.toIso8601String()
             : '',
-        'Batch': e.batch ?? '',
-        'Created At': e.createdAt.toIso8601String(),
-      };
-    }).toList();
+        'Units': unitQty.entries
+            .map((e) => '${e.key}: ${e.value.toInt()}')
+            .join(' | '),
+        'Total Qty (BOX)': totalQty,
+        'Created At': first.createdAt.toIso8601String(),
+      });
+    }
+
+    return result;
   }
 
   Future<void> updateFullItem({required StockBatchItemModel item}) async {
@@ -246,5 +280,32 @@ class StockBatchRepository {
     );
 
     await local.saveItem(item);
+  }
+
+  Future<List<Map<String, dynamic>>> loadExcelDataFromSupabase({
+    required String projectId,
+  }) async {
+    final res = await Supabase.instance.client
+        .from('stock_taking_batch_items')
+        .select()
+        .eq('project_id', projectId)
+        .eq('is_deleted', false)
+        .order('created_at');
+
+    if (res.isEmpty) return [];
+
+    return res.map<Map<String, dynamic>>((e) {
+      return {
+        'Branch': e['branch_name'] ?? '',
+        'Item Code': e['item_code'] ?? '',
+        'Item Name': e['item_name'] ?? '',
+        'Barcode': e['barcode'] ?? '',
+        'Unit': e['unit'] ?? 'BOX', // دائمًا BOX
+        'Quantity': e['qty'] ?? 0,
+        'Near Expiry': e['near_expiry'] ?? '',
+        'Batch': e['batch'] ?? '',
+        'Created At': e['created_at'] ?? '',
+      };
+    }).toList();
   }
 }

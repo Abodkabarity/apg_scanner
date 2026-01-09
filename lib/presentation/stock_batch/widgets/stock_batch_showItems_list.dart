@@ -122,7 +122,7 @@ class StockBatchShowItemsList extends StatelessWidget {
                                   fontSize: 13.sp,
                                 ),
                               ),
-                              onTap: () async {
+                              onLongPress: () async {
                                 final bloc = context.read<StockBatchBloc>();
                                 final productsRepo = bloc.productsRepo;
 

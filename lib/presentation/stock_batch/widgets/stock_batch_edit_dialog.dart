@@ -124,10 +124,9 @@ class _StockBatchMultiUnitDialogState extends State<StockBatchMultiUnitDialog> {
                         textAlign: TextAlign.center,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*$'),
-                          ),
+                          FilteringTextInputFormatter.digitsOnly,
                         ],
+
                         decoration: InputDecoration(
                           isDense: true,
                           filled: true,
@@ -228,10 +227,60 @@ class _StockBatchMultiUnitDialogState extends State<StockBatchMultiUnitDialog> {
         /// DELETE
         TextButton(
           onPressed: () {
-            widget.onDelete();
-            Navigator.pop(context);
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text(
+                  "Delete Item",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp,
+                  ),
+                ),
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Are you sure you want to delete?",
+                      textAlign: TextAlign.start,
+                      style: TextStyle(color: AppColor.secondaryColor),
+                    ),
+                    Text(
+                      widget.group.itemName,
+                      textAlign: TextAlign.start,
+                      style: TextStyle(
+                        color: AppColor.secondaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    child: const Text(
+                      "No",
+                      style: TextStyle(color: AppColor.secondaryColor),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  ElevatedButton(
+                    child: const Text(
+                      "Yes",
+                      style: TextStyle(color: AppColor.secondaryColor),
+                    ),
+                    onPressed: () {
+                      widget.onDelete();
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            );
           },
-          child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          child: const Text("Delete Item", style: TextStyle(color: Colors.red)),
         ),
 
         /// CANCEL

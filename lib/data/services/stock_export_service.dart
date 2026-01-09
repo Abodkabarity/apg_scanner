@@ -21,7 +21,6 @@ class StockExportService {
     );
 
     if (!saved) {
-      // المستخدم ضغط Cancel
       return;
     }
   }

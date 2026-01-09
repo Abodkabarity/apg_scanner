@@ -25,6 +25,7 @@ class StockBatchPage extends StatelessWidget {
   final nameController = TextEditingController();
   final qtyController = TextEditingController();
   final qtyFocusNode = FocusNode();
+  final scanFocusNode = FocusNode();
 
   @override
   Widget build(BuildContext context) {
@@ -63,12 +64,11 @@ class StockBatchPage extends StatelessWidget {
               icon: icon,
             );
 
-            // امسح الحقول فقط عند success حقيقي
             if (type == SnackType.success) {
               nameController.clear();
               scanController.clear();
               qtyController.clear();
-              FocusScope.of(context).unfocus();
+              FocusScope.of(context).requestFocus(scanFocusNode);
 
               context.read<StockBatchBloc>().add(ResetBatchFormEvent());
             }
@@ -128,7 +128,7 @@ class StockBatchPage extends StatelessWidget {
                             : "All data uploaded",
                         onPressed: () async {
                           FocusManager.instance.primaryFocus?.unfocus();
-
+                          final bloc = context.read<StockBatchBloc>();
                           final confirm = await showDialog<bool>(
                             context: context,
                             builder: (_) => AlertDialog(
@@ -161,7 +161,7 @@ class StockBatchPage extends StatelessWidget {
                           );
 
                           if (confirm == true) {
-                            context.read<StockBatchBloc>().add(
+                            bloc.add(
                               UploadStockBatchEvent(
                                 projectId: project.id.toString(),
                               ),
@@ -189,6 +189,8 @@ class StockBatchPage extends StatelessWidget {
                         ),
                         onPressed: disabled
                             ? () {
+                                FocusScope.of(context).unfocus();
+
                                 showTopSnackBar(
                                   context,
                                   message:
@@ -233,11 +235,111 @@ class StockBatchPage extends StatelessWidget {
                           ),
                           child: TextField(
                             controller: scanController,
+                            textInputAction: TextInputAction.done,
+
                             onChanged: (v) {
                               context.read<StockBatchBloc>().add(
                                 SearchBatchQueryChanged(v),
                               );
                             },
+
+                            onSubmitted: (value) async {
+                              final bloc = context.read<StockBatchBloc>();
+                              final state = bloc.state;
+                              if (state.currentProduct != null &&
+                                  qtyController.text.isNotEmpty) {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text(
+                                      "Unsaved Item",
+                                      style: TextStyle(
+                                        color: AppColor.secondaryColor,
+                                      ),
+                                    ),
+                                    content: const Text(
+                                      "You have an unapproved item.\nDo you want to save it before continuing?",
+                                      style: TextStyle(
+                                        color: AppColor.secondaryColor,
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text(
+                                          "No",
+                                          style: TextStyle(
+                                            color: AppColor.secondaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text(
+                                          "Yes",
+                                          style: TextStyle(
+                                            color: AppColor.secondaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirm == true) {
+                                  final qty =
+                                      double.tryParse(qtyController.text) ?? 0;
+
+                                  if (state.selectedUnit != null && qty > 0) {
+                                    bloc.add(
+                                      ApproveBatchItemEvent(
+                                        projectId: project.id.toString(),
+                                        projectName: project.name,
+                                        barcode: scanController.text.trim(),
+                                        unit: state.selectedUnit!,
+                                        qty: qty,
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  bloc.add(ResetBatchFormEvent());
+                                  scanController.clear();
+                                  nameController.clear();
+                                  qtyController.clear();
+                                }
+                              }
+
+                              final suggestions = bloc.state.suggestions;
+
+                              if (suggestions.isEmpty) return;
+
+                              if (suggestions.length == 1) {
+                                bloc.add(
+                                  ProductChosenFromSearchEvent(
+                                    suggestions.first,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              final normalized = value.replaceAll(' ', '');
+
+                              final exact = suggestions.where(
+                                (p) => p.barcodes.any(
+                                  (b) => b.replaceAll(' ', '') == normalized,
+                                ),
+                              );
+
+                              if (exact.length == 1) {
+                                bloc.add(
+                                  ProductChosenFromSearchEvent(exact.first),
+                                );
+                              }
+                            },
+
+                            focusNode: scanFocusNode,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: Colors.white,
@@ -271,6 +373,10 @@ class StockBatchPage extends StatelessWidget {
                                   IconButton(
                                     icon: const Icon(Icons.scanner),
                                     onPressed: () async {
+                                      final bloc = context
+                                          .read<StockBatchBloc>();
+                                      final state = bloc.state;
+
                                       final barcode = await Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -279,17 +385,80 @@ class StockBatchPage extends StatelessWidget {
                                         ),
                                       );
 
-                                      if (barcode != null) {
-                                        context.read<StockBatchBloc>().add(
-                                          ScanBatchBarcodeEvent(
-                                            projectId: project.id,
-                                            barcode: barcode,
+                                      if (barcode == null) return;
+
+                                      if (state.currentProduct != null &&
+                                          qtyController.text.isNotEmpty) {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (_) => AlertDialog(
+                                            title: const Text("Unsaved Item"),
+                                            content: const Text(
+                                              "You have selected a product and entered quantity.\nDo you want to save it before continuing?",
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  false,
+                                                ),
+                                                child: const Text("No"),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  true,
+                                                ),
+                                                child: const Text("Yes"),
+                                              ),
+                                            ],
                                           ),
                                         );
+
+                                        if (confirm == true) {
+                                          bloc.add(
+                                            ApproveBatchItemEvent(
+                                              projectId: project.id.toString(),
+                                              projectName: project.name,
+                                              barcode: scanController.text
+                                                  .trim(),
+                                              unit: state.selectedUnit!,
+                                              qty:
+                                                  double.tryParse(
+                                                    qtyController.text,
+                                                  ) ??
+                                                  0,
+                                            ),
+                                          );
+                                        } else {
+                                          bloc.add(ResetBatchFormEvent());
+                                        }
                                       }
+
+                                      bloc.add(
+                                        ScanBatchBarcodeEvent(
+                                          projectId: project.id,
+                                          barcode: barcode,
+                                        ),
+                                      );
                                     },
                                   ),
                                 ],
+                              ),
+                              labelStyle: TextStyle(
+                                color: AppColor.secondaryColor,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25.r),
+                                borderSide: BorderSide(
+                                  color: AppColor.primaryColor,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25.r),
+                                borderSide: BorderSide(
+                                  color: AppColor.primaryColor,
+                                ),
                               ),
                             ),
                           ),
@@ -333,6 +502,7 @@ class StockBatchPage extends StatelessWidget {
                           nameController: nameController,
                           qtyController: qtyController,
                           qtyFocusNode: qtyFocusNode,
+                          scanFocusNode: scanFocusNode,
                         ),
                         StockBatchShowItemsList(
                           projectId: project.id.toString(),
@@ -341,11 +511,27 @@ class StockBatchPage extends StatelessWidget {
                     ),
                   ),
 
-                  if (state.loading)
+                  if (state.isProcessing)
                     Container(
-                      color: Colors.black.withOpacity(0.3),
-                      child: const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
+                      color: Colors.black.withOpacity(0.45),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              state.processingMessage ?? "Processing...",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                 ],

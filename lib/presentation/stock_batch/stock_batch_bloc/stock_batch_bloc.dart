@@ -23,6 +23,7 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     on<ChangeSelectedBatchEvent>(_onChangeBatch);
     on<ApproveBatchItemEvent>(_onApprove);
     on<DeleteStockBatchGroupEvent>(_onDeleteGroup);
+    on<ConfirmDiscardOrSaveEvent>(_onConfirmDiscardOrSave);
 
     on<SearchBatchQueryChanged>(_onSearch);
     on<ResetBatchFormEvent>(_onReset);
@@ -87,6 +88,7 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
           loading: false,
 
           currentProduct: product,
+          hasPendingItem: true, // ✅
 
           expiryOptions: const [],
           selectedExpiry: null,
@@ -117,15 +119,12 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         product.itemCode,
         selectedExpiry,
       );
-
-      if (batchOptions.length == 1) {
-        selectedBatch = batchOptions.first;
-      }
     }
 
     emit(
       state.copyWith(
         loading: false,
+        hasPendingItem: true,
 
         currentProduct: product,
 
@@ -133,10 +132,11 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         selectedExpiry: selectedExpiry,
 
         batchOptions: batchOptions,
-        selectedBatch: selectedBatch,
+        selectedBatch: null,
 
         units: units,
         selectedUnit: units.isNotEmpty ? units.first : null,
+        autoFocusQty: batchOptions.length == 1,
 
         scannedBarcode: event.barcode,
         clearError: true,
@@ -161,9 +161,8 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         manualExpiry: event.isManual ? event.expiry : null,
 
         batchOptions: batches,
-
-        selectedBatch: batches.length == 1 ? batches.first : null,
-
+        selectedBatch: null,
+        autoFocusQty: false,
         manualBatch: null,
       ),
     );
@@ -174,11 +173,14 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     ChangeSelectedBatchEvent event,
     Emitter<StockBatchState> emit,
   ) {
+    final batch = event.batch.trim().toUpperCase();
+
     emit(
       state.copyWith(
-        selectedBatch: event.batch,
+        selectedBatch: batch,
 
-        manualBatch: event.isManual ? event.batch : null,
+        manualBatch: event.isManual ? batch : null,
+        autoFocusQty: false,
       ),
     );
   }
@@ -267,6 +269,7 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         batchOptions: const [],
         selectedBatch: null,
         manualBatch: null,
+        hasPendingItem: false,
 
         units: const [],
         selectedUnit: null,
@@ -349,6 +352,7 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         manualBatch: null,
         units: const [],
         selectedUnit: null,
+        hasPendingItem: false,
 
         clearError: true,
         clearSuccess: true,
@@ -443,10 +447,6 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
           product.itemCode,
           selectedExpiry,
         );
-
-        if (batchOptions.length == 1) {
-          selectedBatch = batchOptions.first;
-        }
       }
     }
 
@@ -458,7 +458,8 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         selectedExpiry: product.isBatch ? selectedExpiry : null,
 
         batchOptions: product.isBatch ? batchOptions : const [],
-        selectedBatch: product.isBatch ? selectedBatch : null,
+        selectedBatch: null,
+        hasPendingItem: true, // ✅
 
         units: units,
         selectedUnit: units.isNotEmpty ? units.first : null,
@@ -478,7 +479,14 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     Emitter<StockBatchState> emit,
   ) async {
     try {
-      emit(state.copyWith(loading: true));
+      emit(
+        state.copyWith(
+          isProcessing: true,
+          processingMessage: "Generating Excel...",
+          clearError: true,
+          clearSuccess: true,
+        ),
+      );
 
       await exportService.exportAndSaveExcel(
         projectId: event.projectId,
@@ -487,12 +495,21 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
 
       emit(
         state.copyWith(
-          loading: false,
+          isProcessing: false,
+          processingMessage: null,
+          snackType: SnackType.success,
           success: "Stock Batch Excel saved successfully",
         ),
       );
     } catch (e) {
-      emit(state.copyWith(loading: false, error: e.toString()));
+      emit(
+        state.copyWith(
+          isProcessing: false,
+          processingMessage: null,
+          snackType: SnackType.error,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -501,7 +518,14 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     Emitter<StockBatchState> emit,
   ) async {
     try {
-      emit(state.copyWith(loading: true));
+      emit(
+        state.copyWith(
+          isProcessing: true,
+          processingMessage: "Sending email...",
+          clearError: true,
+          clearSuccess: true,
+        ),
+      );
 
       await exportService.sendExcelByEmail(
         projectId: event.projectId,
@@ -511,12 +535,19 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
 
       emit(
         state.copyWith(
-          loading: false,
+          isProcessing: false,
+          processingMessage: null,
           success: "Stock Batch report sent to ${session.email}",
         ),
       );
     } catch (e) {
-      emit(state.copyWith(loading: false, error: e.toString()));
+      emit(
+        state.copyWith(
+          isProcessing: false,
+          processingMessage: null,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -706,6 +737,34 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
       );
     } catch (e) {
       emit(state.copyWith(loading: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onConfirmDiscardOrSave(
+    ConfirmDiscardOrSaveEvent event,
+    Emitter<StockBatchState> emit,
+  ) async {
+    if (event.saveBeforeContinue) {
+      add(
+        ApproveBatchItemEvent(
+          projectId: event.projectId,
+          projectName: event.projectName,
+          barcode: event.barcode,
+          unit: event.unit,
+          qty: event.qty,
+        ),
+      );
+    } else {
+      add(ResetBatchFormEvent());
+    }
+
+    if (event.nextBarcode != null) {
+      add(
+        ScanBatchBarcodeEvent(
+          projectId: event.projectId,
+          barcode: event.nextBarcode!,
+        ),
+      );
     }
   }
 }

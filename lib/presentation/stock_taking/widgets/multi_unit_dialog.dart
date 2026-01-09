@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/app_color/app_color.dart';
@@ -86,6 +87,8 @@ class _MultiUnitEditDialogState extends State<MultiUnitEditDialog> {
                     width: 90,
                     child: TextField(
                       controller: e.value,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+
                       textAlign: TextAlign.center,
                       keyboardType: TextInputType.number,
                       onChanged: (_) => _recalc(),

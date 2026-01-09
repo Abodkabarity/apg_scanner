@@ -16,6 +16,8 @@ class StockBatchState extends Equatable {
   // UI STATUS
   // ---------------------------------------------------------------------------
   final bool loading;
+  final bool isProcessing;
+  final String? processingMessage;
 
   // ---------------------------------------------------------------------------
   // STORED ITEMS
@@ -25,6 +27,7 @@ class StockBatchState extends Equatable {
   final List<StockBatchGroup> filteredGroupedItems;
   final DateTime? manualExpiry;
   final String? manualBatch;
+  final bool hasPendingItem;
 
   // ---------------------------------------------------------------------------
   // CURRENT PRODUCT
@@ -41,6 +44,7 @@ class StockBatchState extends Equatable {
   final List<String> batchOptions;
   final String? selectedBatch;
   final SnackType? snackType;
+  final bool autoFocusQty;
 
   // ---------------------------------------------------------------------------
   // UNIT / QTY
@@ -70,6 +74,8 @@ class StockBatchState extends Equatable {
     this.items = const [],
     this.groupedItems = const [],
     this.filteredGroupedItems = const [],
+    this.autoFocusQty = false,
+    this.hasPendingItem = false,
 
     this.currentProduct,
 
@@ -81,7 +87,8 @@ class StockBatchState extends Equatable {
 
     this.units = const [],
     this.selectedUnit,
-
+    this.isProcessing = false,
+    this.processingMessage,
     this.suggestions = const [],
     this.scannedBarcode,
 
@@ -97,19 +104,22 @@ class StockBatchState extends Equatable {
   // ---------------------------------------------------------------------------
   // SYNC STATUS
   // ---------------------------------------------------------------------------
-  bool get hasUnsyncedItems => items.any((e) => !e.isSynced && !e.isDeleted);
+  bool get hasUnsyncedItems => items.any((e) => !e.isSynced);
 
   StockBatchState copyWith({
     bool? loading,
     List<StockBatchItemModel>? items,
     List<StockBatchGroup>? groupedItems,
     List<StockBatchGroup>? filteredGroupedItems,
+    bool? autoFocusQty,
 
     Object? manualExpiry = _unset,
     Object? manualBatch = _unset,
 
     ProductWithBatchModel? currentProduct,
     bool clearCurrentProduct = false,
+    bool? isProcessing,
+    String? processingMessage,
 
     List<DateTime>? expiryOptions,
     Object? selectedExpiry = _unset,
@@ -117,6 +127,7 @@ class StockBatchState extends Equatable {
     List<String>? batchOptions,
     Object? selectedBatch = _unset,
     SnackType? snackType,
+    bool? hasPendingItem,
 
     List<String>? units,
     String? selectedUnit,
@@ -146,11 +157,13 @@ class StockBatchState extends Equatable {
       selectedExpiry: selectedExpiry == _unset
           ? this.selectedExpiry
           : selectedExpiry as DateTime?,
-
+      isProcessing: isProcessing ?? this.isProcessing,
+      processingMessage: processingMessage ?? this.processingMessage,
       batchOptions: batchOptions ?? this.batchOptions,
       selectedBatch: selectedBatch == _unset
           ? this.selectedBatch
           : selectedBatch as String?,
+      autoFocusQty: autoFocusQty ?? this.autoFocusQty,
 
       units: units ?? this.units,
       selectedUnit: selectedUnit ?? this.selectedUnit,
@@ -168,6 +181,7 @@ class StockBatchState extends Equatable {
 
       error: clearError ? null : error ?? this.error,
       success: clearSuccess ? null : success ?? this.success,
+      hasPendingItem: hasPendingItem ?? this.hasPendingItem,
 
       resetForm: resetForm ?? false,
       snackType: snackType ?? this.snackType,
@@ -200,10 +214,13 @@ class StockBatchState extends Equatable {
 
     suggestions,
     scannedBarcode,
-
+    isProcessing,
+    processingMessage,
     error,
     success,
     snackType,
     resetForm,
+    autoFocusQty,
+    hasPendingItem,
   ];
 }

@@ -4,6 +4,7 @@ import 'package:apg_scanner/presentation/stock_taking/stock_taking_bloc/stock_ta
 import 'package:apg_scanner/presentation/stock_taking/widgets/dropdown_type_unit.dart';
 import 'package:apg_scanner/presentation/stock_taking/widgets/submit_button.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -67,6 +68,8 @@ class ProductDetailsBlock extends StatelessWidget {
                   focusNode: qtyFocusNode,
                   controller: qtyController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+
                   decoration: InputDecoration(
                     fillColor: Colors.white,
                     filled: true,

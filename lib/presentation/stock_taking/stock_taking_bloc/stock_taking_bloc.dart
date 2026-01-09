@@ -785,7 +785,6 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         final subQty = r.subQuantity;
         totalSubQty += subQty;
 
-        // ✅ تحويل عكسي للعرض فقط (مثل Near)
         if (r.unit.toLowerCase() == 'box') {
           unitQty[r.unit] = subQty.round();
         } else if (product.numberSubUnit > 0) {
@@ -806,7 +805,6 @@ class StockBloc extends Bloc<StockEvent, StockState> {
 
           totalSubQty: totalSubQty,
 
-          // نفس Near
           totalDisplayQty: unitQty.values.fold<int>(0, (s, e) => s + e),
 
           unitQty: unitQty,
@@ -827,13 +825,11 @@ class StockBloc extends Bloc<StockEvent, StockState> {
   ) async {
     await productsRepo.ensureLoaded();
 
-
     final product = productsRepo.products.firstWhere(
       (p) => p.itemCode == event.group.itemCode,
       orElse: () => throw Exception("Product not found"),
     );
 
-    // 🔹 التحويل الصحيح: qty → subQuantity (Base Unit)
     double subFromQty({
       required String unit,
       required int qty,

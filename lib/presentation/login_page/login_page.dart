@@ -77,8 +77,8 @@ class LoginPage extends StatelessWidget {
                             LoginSubmitted(
                               // emailController.text.trim(),
                               // passwordController.text.trim(),
-                              "a.alkabariti@alain-pharmacy.com",
-                              "Abod@1234",
+                              "abod.kabarit3@gmail.com",
+                              "12345",
                             ),
                           );
                         },
