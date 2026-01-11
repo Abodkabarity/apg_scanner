@@ -118,8 +118,21 @@ class ProductsWithBatchRepository {
   }
 
   ProductWithBatchModel? findByBarcode(String barcode) {
-    final key = _normalizeBarcode(barcode);
-    return _barcodeIndex[key];
+    final normalized = _normalizeBarcode(barcode);
+
+    try {
+      return _cache.firstWhere((p) {
+        for (final b in p.barcodes) {
+          final parts = b.split(',').map((e) => _normalizeBarcode(e.trim()));
+          if (parts.contains(normalized)) {
+            return true;
+          }
+        }
+        return false;
+      });
+    } catch (_) {
+      return null;
+    }
   }
 
   DateTime? _parseDate(String? value) {
