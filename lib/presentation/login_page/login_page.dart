@@ -75,10 +75,10 @@ class LoginPage extends StatelessWidget {
 
                           context.read<LoginBloc>().add(
                             LoginSubmitted(
-                              // emailController.text.trim(),
-                              // passwordController.text.trim(),
-                              "abod.kabarit3@gmail.com",
-                              "12345",
+                              emailController.text.trim(),
+                              passwordController.text.trim(),
+                              /*   "a.alkabariti@alain-pharmacy.com",
+                              "Abod@1234",*/
                             ),
                           );
                         },

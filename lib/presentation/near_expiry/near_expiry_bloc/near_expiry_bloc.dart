@@ -530,6 +530,9 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
         productAlreadyExists: false,
         error: null,
         suggestions: const [],
+
+        editingUnitQty: const {},
+        clearEditingNearExpiry: true,
       ),
     );
   }
@@ -682,7 +685,16 @@ class NearExpiryBloc extends Bloc<NearExpiryEvent, NearExpiryState> {
         });
       });
 
-      await repo.uploadNearExpiryPayload(payload);
+      final branch = session.branch;
+      if (branch == null || branch.isEmpty) {
+        throw Exception("Branch not found in session");
+      }
+
+      await repo.uploadNearExpiryPayload(
+        projectId: event.projectId,
+        branchName: branch,
+        payload: payload,
+      );
 
       final syncedItems = state.items
           .map((item) => item.copyWith(isSynced: true))

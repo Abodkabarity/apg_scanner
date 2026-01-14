@@ -128,7 +128,7 @@ class StockBatchShowItemsList extends StatelessWidget {
 
                                 final confirm = await showDialog<bool>(
                                   context: context,
-                                  builder: (_) => AlertDialog(
+                                  builder: (dialogCtx) => AlertDialog(
                                     title: const Text("Edit Item"),
                                     content: const Text(
                                       "Do you want to edit this item?",
@@ -136,17 +136,19 @@ class StockBatchShowItemsList extends StatelessWidget {
                                     actions: [
                                       TextButton(
                                         onPressed: () =>
-                                            Navigator.pop(context, false),
+                                            Navigator.of(dialogCtx).pop(false),
                                         child: const Text("No"),
                                       ),
                                       ElevatedButton(
                                         onPressed: () =>
-                                            Navigator.pop(context, true),
+                                            Navigator.of(dialogCtx).pop(true),
                                         child: const Text("Yes"),
                                       ),
                                     ],
                                   ),
                                 );
+
+                                if (!context.mounted) return;
 
                                 if (confirm != true) return;
 
@@ -156,6 +158,8 @@ class StockBatchShowItemsList extends StatelessWidget {
                                     )
                                     .first;
 
+                                if (!context.mounted) return;
+
                                 showDialog(
                                   barrierDismissible: false,
                                   context: context,
@@ -163,18 +167,17 @@ class StockBatchShowItemsList extends StatelessWidget {
                                     value: bloc,
                                     child: StockBatchMultiUnitDialog(
                                       group: group,
+                                      isBatch: product.isBatch,
 
                                       allUnits: productsRepo.getUnitsForProduct(
                                         product,
                                       ),
-
                                       subUnitQty:
                                           product.subunitQty?.toInt() ?? 1,
 
                                       initialUnitQty: Map<String, double>.from(
                                         group.unitQty,
                                       ),
-
                                       initialExpiry: group.nearExpiry,
                                       initialBatch: group.batch,
 

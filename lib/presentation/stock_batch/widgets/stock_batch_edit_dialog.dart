@@ -3,15 +3,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/app_color/app_color.dart';
+import '../../../core/utils/text_input_formatter.dart';
 import '../../../data/model/stock_batch_group.dart';
 
 class StockBatchMultiUnitDialog extends StatefulWidget {
   final StockBatchGroup group;
 
-  /// BOX / STRIP / ...
+  final bool isBatch;
+
   final Map<String, double> initialUnitQty;
 
   final DateTime? initialExpiry;
+
   final String? initialBatch;
 
   final void Function(
@@ -28,6 +31,7 @@ class StockBatchMultiUnitDialog extends StatefulWidget {
   const StockBatchMultiUnitDialog({
     super.key,
     required this.group,
+    required this.isBatch,
     required this.initialUnitQty,
     required this.initialExpiry,
     required this.initialBatch,
@@ -44,15 +48,23 @@ class StockBatchMultiUnitDialog extends StatefulWidget {
 
 class _StockBatchMultiUnitDialogState extends State<StockBatchMultiUnitDialog> {
   late Map<String, TextEditingController> _controllers;
+
   DateTime? _selectedExpiry;
   String? _batch;
+
+  late final TextEditingController _batchController;
 
   @override
   void initState() {
     super.initState();
 
-    _selectedExpiry = widget.initialExpiry;
+    _selectedExpiry = widget.initialExpiry == null
+        ? null
+        : DateTime(widget.initialExpiry!.year, widget.initialExpiry!.month, 1);
+
     _batch = widget.initialBatch;
+
+    _batchController = TextEditingController(text: _batch ?? '');
 
     _controllers = {
       for (final unit in widget.allUnits)
@@ -60,6 +72,15 @@ class _StockBatchMultiUnitDialogState extends State<StockBatchMultiUnitDialog> {
           text: (widget.initialUnitQty[unit] ?? 0).toString(),
         ),
     };
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    _batchController.dispose();
+    super.dispose();
   }
 
   double get _totalQty {
@@ -83,6 +104,70 @@ class _StockBatchMultiUnitDialogState extends State<StockBatchMultiUnitDialog> {
 
   String _formatMonth(DateTime d) =>
       "${d.month.toString().padLeft(2, '0')}/${d.year}";
+
+  Future<DateTime?> showMonthYearPicker(BuildContext context) async {
+    int selectedMonth = (_selectedExpiry ?? DateTime.now()).month;
+    int selectedYear = (_selectedExpiry ?? DateTime.now()).year;
+
+    return showDialog<DateTime>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Select Expiry (MM / YYYY)'),
+          content: Row(
+            children: [
+              // MONTH
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  value: selectedMonth,
+                  items: List.generate(
+                    12,
+                    (i) => DropdownMenuItem(
+                      value: i + 1,
+                      child: Text((i + 1).toString().padLeft(2, '0')),
+                    ),
+                  ),
+                  onChanged: (v) => selectedMonth = v!,
+                  decoration: const InputDecoration(labelText: 'Month'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // YEAR
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  value: selectedYear,
+                  items: List.generate(15, (i) {
+                    final year = DateTime.now().year + i;
+                    return DropdownMenuItem(
+                      value: year,
+                      child: Text(year.toString()),
+                    );
+                  }),
+                  onChanged: (v) => selectedYear = v!,
+                  decoration: const InputDecoration(labelText: 'Year'),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(
+                  context,
+                  DateTime(selectedYear, selectedMonth, 1),
+                );
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +211,6 @@ class _StockBatchMultiUnitDialogState extends State<StockBatchMultiUnitDialog> {
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
-
                         decoration: InputDecoration(
                           isDense: true,
                           filled: true,
@@ -169,17 +253,12 @@ class _StockBatchMultiUnitDialogState extends State<StockBatchMultiUnitDialog> {
 
             const SizedBox(height: 18),
 
-            /// ---------------- NEAR EXPIRY ----------------
-            if (_selectedExpiry != null)
+            /// ✅ ---------------- NEAR EXPIRY (ONLY Month/Year Picker) ----------------
+            if (widget.isBatch) ...[
               InkWell(
                 borderRadius: BorderRadius.circular(14),
                 onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2100),
-                    initialDate: _selectedExpiry!,
-                  );
+                  final picked = await showMonthYearPicker(context);
                   if (picked != null) {
                     setState(() {
                       _selectedExpiry = DateTime(picked.year, picked.month, 1);
@@ -198,7 +277,9 @@ class _StockBatchMultiUnitDialogState extends State<StockBatchMultiUnitDialog> {
                       const Icon(Icons.event, size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        "Near Expiry: ${_formatMonth(_selectedExpiry!)}",
+                        _selectedExpiry == null
+                            ? "Select Near Expiry (MM/YYYY)"
+                            : "Near Expiry: ${_formatMonth(_selectedExpiry!)}",
                         style: const TextStyle(color: AppColor.secondaryColor),
                       ),
                     ],
@@ -206,16 +287,20 @@ class _StockBatchMultiUnitDialogState extends State<StockBatchMultiUnitDialog> {
                 ),
               ),
 
-            /// ---------------- BATCH ----------------
-            if (_batch != null) ...[
               const SizedBox(height: 10),
+
+              /// ✅ ---------------- BATCH (always visible if isBatch) ----------------
               TextField(
-                controller: TextEditingController(text: _batch),
+                controller: _batchController,
+                textCapitalization: TextCapitalization.characters,
+                inputFormatters: [UpperCaseTextFormatter()],
                 decoration: const InputDecoration(
                   labelText: "Batch",
                   isDense: true,
                 ),
-                onChanged: (v) => _batch = v,
+                onChanged: (v) {
+                  _batch = v.trim().toUpperCase();
+                },
               ),
             ],
           ],
@@ -298,6 +383,18 @@ class _StockBatchMultiUnitDialogState extends State<StockBatchMultiUnitDialog> {
               final qty = double.tryParse(e.value.text) ?? 0;
               if (qty > 0) {
                 result[e.key] = qty;
+              }
+            }
+
+            if (widget.isBatch) {
+              final batchText = (_batchController.text).trim();
+              _batch = batchText.isEmpty ? null : batchText.toUpperCase();
+
+              if (_selectedExpiry == null) {
+                return;
+              }
+              if (_batch == null || _batch!.isEmpty) {
+                return;
               }
             }
 

@@ -394,8 +394,16 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
   List<StockBatchGroup> _groupByItemAndBatch(List<StockBatchItemModel> items) {
     final Map<String, List<StockBatchItemModel>> map = {};
 
+    String expiryKey(DateTime? d) {
+      if (d == null) return 'NO_EXP';
+      final x = DateTime(d.year, d.month, d.day);
+      return '${x.year}-${x.month.toString().padLeft(2, '0')}-${x.day.toString().padLeft(2, '0')}';
+    }
+
     for (final it in items) {
-      final key = '${it.itemCode}__${it.batch ?? '-'}';
+      final key =
+          '${it.itemCode}__${it.batch ?? '-'}__${expiryKey(it.nearExpiry)}';
+
       map.putIfAbsent(key, () => []);
       map[key]!.add(it);
     }
@@ -423,6 +431,8 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
         } else {
           if (subUnitQty > 0) {
             total += r.quantity / subUnitQty;
+          } else {
+            total += r.quantity;
           }
         }
 
@@ -446,7 +456,6 @@ class StockBatchBloc extends Bloc<StockBatchEvent, StockBatchState> {
     }
 
     groups.sort((a, b) => b.latestCreatedAt.compareTo(a.latestCreatedAt));
-
     return groups;
   }
 

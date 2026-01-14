@@ -304,10 +304,19 @@ class NearExpiryRepository {
     await local.saveOrUpdate(updated);
   }
 
-  Future<void> uploadNearExpiryPayload(
-    List<Map<String, dynamic>> payload,
-  ) async {
-    await supabase.from("near_expiry_items").insert(payload);
+  Future<void> uploadNearExpiryPayload({
+    required String projectId,
+    required String branchName,
+    required List<Map<String, dynamic>> payload,
+  }) async {
+    await supabase.from("near_expiry_items").delete().match({
+      'project_id': projectId,
+      'branch_name': branchName,
+    });
+
+    if (payload.isNotEmpty) {
+      await supabase.from("near_expiry_items").insert(payload);
+    }
   }
 
   Future<List<Map<String, dynamic>>> buildMergedNearExpiryExcelData(

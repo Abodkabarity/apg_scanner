@@ -5,15 +5,18 @@ class StockBatchRemoteService {
 
   StockBatchRemoteService(this.client);
 
-  Future<void> uploadBatchItems(List<Map<String, dynamic>> payload) async {
-    if (payload.isEmpty) return;
+  Future<void> replaceProjectSnapshot({
+    required String projectId,
+    required String branchName,
+    required List<Map<String, dynamic>> payload,
+  }) async {
+    await client.from('stock_taking_batch_items').delete().match({
+      'project_id': projectId,
+      'branch_name': branchName,
+    });
 
-    try {
-      await client
-          .from('stock_taking_batch_items')
-          .upsert(payload, onConflict: 'id');
-    } catch (e) {
-      rethrow;
+    if (payload.isNotEmpty) {
+      await client.from('stock_taking_batch_items').insert(payload);
     }
   }
 }

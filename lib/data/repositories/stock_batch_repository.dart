@@ -111,17 +111,28 @@ class StockBatchRepository {
     final items = await loadItems(projectId);
 
     final pending = items.where((e) => !e.isSynced).toList();
+    if (pending.isEmpty) return false;
 
-    if (pending.isEmpty) {
-      return false;
+    final branchName = session.branch;
+    if (branchName == null || branchName.isEmpty) {
+      throw Exception("Branch not found in session");
     }
+
+    String expiryKey(DateTime? d) {
+      if (d == null) return 'NO_EXP';
+      final x = DateTime(d.year, d.month, d.day);
+      return '${x.year}-${x.month.toString().padLeft(2, '0')}-${x.day.toString().padLeft(2, '0')}';
+    }
+
+    final visible = items.where((e) => !e.isDeleted).toList();
 
     final Map<String, List<StockBatchItemModel>> grouped = {};
 
-    for (final item in pending) {
-      final key = '${item.itemCode}__${item.batch ?? '-'}';
+    for (final it in visible) {
+      final key =
+          '${it.itemCode}__${it.batch ?? '-'}__${expiryKey(it.nearExpiry)}';
       grouped.putIfAbsent(key, () => []);
-      grouped[key]!.add(item);
+      grouped[key]!.add(it);
     }
 
     final List<Map<String, dynamic>> payload = [];
@@ -130,46 +141,51 @@ class StockBatchRepository {
       final rows = entry.value;
       final first = rows.first;
 
-      double totalQty = 0;
+      double totalQtyBox = 0;
 
       for (final r in rows) {
         if (r.unitType.toUpperCase() == 'BOX') {
-          totalQty += r.quantity;
+          totalQtyBox += r.quantity;
         } else {
           final sub = (r.subUnitQty ?? 1);
           if (sub <= 0) {
-            totalQty += r.quantity;
+            totalQtyBox += r.quantity;
           } else {
-            totalQty += (r.quantity / sub);
+            totalQtyBox += (r.quantity / sub);
           }
         }
       }
 
-      payload.add({
-        'id': first.id,
+      final DateTime? ne = first.nearExpiry;
+      final DateTime? normalizedNearExpiry = ne == null
+          ? null
+          : DateTime(ne.year, ne.month, ne.day);
 
+      payload.add({
         'project_id': first.projectId,
         'project_name': first.projectName,
-        'branch_name': first.branchName.isEmpty
-            ? session.branch
-            : first.branchName,
+        'branch_name': first.branchName.isEmpty ? branchName : first.branchName,
 
         'item_code': first.itemCode,
         'item_name': first.itemName,
         'barcode': first.barcode,
-        'is_deleted': first.isDeleted,
+
+        'batch': first.batch,
+        'near_expiry': normalizedNearExpiry?.toIso8601String(),
 
         'unit': 'BOX',
-        'qty': totalQty,
+        'qty': totalQtyBox,
 
-        'near_expiry': first.nearExpiry?.toIso8601String(),
-        'batch': first.batch,
-
-        'created_at': first.createdAt.toUtc().toIso8601String(),
+        'is_deleted': false,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
       });
     }
 
-    await remote.uploadBatchItems(payload);
+    await remote.replaceProjectSnapshot(
+      projectId: projectId,
+      branchName: branchName,
+      payload: payload,
+    );
 
     for (final item in pending) {
       await local.updateItem(item.copyWith(isSynced: true));
