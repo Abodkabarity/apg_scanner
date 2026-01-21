@@ -208,7 +208,7 @@ class NearExpiryDetailsBlock extends StatelessWidget {
                 ),
 
                 decoration: InputDecoration(
-                  labelText: "Near Expiry (MM/YYYY)",
+                  labelText: "Expiry Date (MM/YYYY)",
                   filled: true,
                   fillColor: Colors.white,
                   labelStyle: TextStyle(color: AppColor.secondaryColor),
@@ -263,7 +263,7 @@ class NearExpiryDetailsBlock extends StatelessWidget {
                           if (expiry == null) {
                             showTopSnackBar(
                               context,
-                              message: "Near expiry required",
+                              message: "Expiry date required",
                               backgroundColor: Colors.orange,
                               icon: Icons.info,
                             );

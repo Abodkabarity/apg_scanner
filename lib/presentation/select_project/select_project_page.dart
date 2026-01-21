@@ -95,7 +95,7 @@ class SelectProjectPage extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 50.h),
               child: Column(
                 children: [
-                  RawMaterialButton(
+                  /*  RawMaterialButton(
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -129,8 +129,10 @@ class SelectProjectPage extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
+                  ),*/
+                  /*
                   SizedBox(height: 50.h),
+*/
                   RawMaterialButton(
                     onPressed: () {
                       Navigator.push(
@@ -168,9 +170,11 @@ class SelectProjectPage extends StatelessWidget {
                       ),
                     ),
                   ),
+                  /*
                   SizedBox(height: 50.h),
+*/
 
-                  RawMaterialButton(
+                  /* RawMaterialButton(
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -203,7 +207,7 @@ class SelectProjectPage extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
+                  ),*/
                 ],
               ),
             ),

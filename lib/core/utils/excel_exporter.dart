@@ -90,7 +90,7 @@ class ExcelExporter {
       TextCellValue('Item Name'),
       TextCellValue('Unit'),
       TextCellValue('Quantity'),
-      TextCellValue('Near Expiry Date'),
+      TextCellValue('Expiry Date'),
     ]);
 
     for (final row in data) {
