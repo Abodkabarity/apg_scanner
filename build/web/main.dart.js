@@ -56831,7 +56831,7 @@ A.d5(B.fw,new A.aR7(this))},
 K(a){return A.pa(null,B.i,A.fy(A.akZ("assets/images/splash.gif",B.e9,1/0),null,null))}}
 A.aR7.prototype={
 $0(){var s,r,q=this.a.c
-q.toString
+if(q==null)return
 s=A.hB(new A.aR6(),null,t.z)
 q=A.aU(q,!1)
 s=A.aQn(s,B.ot,!1,null)
