@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/app_color/app_color.dart';
@@ -25,6 +27,39 @@ class _AuthGateState extends State<AuthGate> {
 
   bool _hasInternet = true;
   bool _checkingInternet = true;
+
+  // ✅ Web-only: enforce 1-day session then auto logout
+  Future<void> _enforceWebSessionOneDay() async {
+    if (!kIsWeb) return;
+
+    final auth = Supabase.instance.client.auth;
+    final session = auth.currentSession;
+    if (session == null) return;
+
+    final box = await Hive.openBox('auth_meta');
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final int? loginAt = box.get('web_login_at') as int?;
+
+    // First time: set login timestamp
+    if (loginAt == null) {
+      await box.put('web_login_at', now);
+      return;
+    }
+
+    final oneDayMs = const Duration(days: 1).inMilliseconds;
+    final elapsed = now - loginAt;
+
+    if (elapsed >= oneDayMs) {
+      await box.delete('web_login_at');
+      await auth.signOut();
+
+      // optional: clear local session holder if you have a method
+      // getIt<UserSession>().clear();
+
+      print('🟠 Web session expired (1 day) -> signed out');
+    }
+  }
 
   /// 🔹 Restore session from Supabase
   Future<void> _restoreSession() async {
@@ -53,6 +88,12 @@ class _AuthGateState extends State<AuthGate> {
     batchRepo.warmUpAfterLogin();
 
     print('🟢 Session restored – batch preload started');
+  }
+
+  /// ✅ Wrapper: enforce web TTL then restore
+  Future<void> _restoreWithWebEnforce() async {
+    await _enforceWebSessionOneDay();
+    await _restoreSession();
   }
 
   /// 🔹 Check internet connection
@@ -90,7 +131,6 @@ class _AuthGateState extends State<AuthGate> {
                   (route) => false,
                 );
               },
-
               child: const Text("Retry"),
             ),
           ],
@@ -102,7 +142,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    _restoreFuture = _restoreSession();
+    _restoreFuture = _restoreWithWebEnforce();
     _checkInternet();
   }
 

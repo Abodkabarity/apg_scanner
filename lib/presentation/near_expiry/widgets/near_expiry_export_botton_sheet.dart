@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -36,38 +37,40 @@ class NearExpiryExportBottomSheet extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 20),
+          kIsWeb ? SizedBox() : const SizedBox(height: 20),
 
           // ---------------- SEND BY EMAIL ----------------
-          SizedBox(
-            width: 250.w,
-            height: 50.h,
-            child: ElevatedButton.icon(
-              icon: const Icon(
-                Icons.email,
-                color: AppColor.secondaryColor,
-                size: 20,
-              ),
-              label: Text(
-                "Send via Email",
-                style: TextStyle(
-                  color: AppColor.secondaryColor,
-                  fontSize: 17.sp,
-                ),
-              ),
-              onPressed: () {
-                Navigator.pop(context);
+          kIsWeb
+              ? SizedBox()
+              : SizedBox(
+                  width: 250.w,
+                  height: 50.h,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(
+                      Icons.email,
+                      color: AppColor.secondaryColor,
+                      size: 20,
+                    ),
+                    label: Text(
+                      "Send via Email",
+                      style: TextStyle(
+                        color: AppColor.secondaryColor,
+                        fontSize: 17.sp,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
 
-                context.read<NearExpiryBloc>().add(
-                  SendByEmailEvent(
-                    projectId: projectId,
-                    branchName: branchName,
-                    projectName: projectName,
+                      context.read<NearExpiryBloc>().add(
+                        SendByEmailEvent(
+                          projectId: projectId,
+                          branchName: branchName,
+                          projectName: projectName,
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-          ),
+                ),
 
           SizedBox(height: 20.h),
 

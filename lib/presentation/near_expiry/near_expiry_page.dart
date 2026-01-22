@@ -345,6 +345,72 @@ class NearExpiryPage extends StatelessWidget {
                                     SearchQueryChanged(value),
                                   );
                                 },
+                                textInputAction: TextInputAction.done,
+
+                                onSubmitted: (value) async {
+                                  final bloc = context.read<NearExpiryBloc>();
+
+                                  final shouldSave = await _confirmDiscard(
+                                    context,
+                                  );
+
+                                  if (shouldSave) {
+                                    final current = bloc.state.currentProduct;
+                                    final unit = bloc.state.selectedUnit;
+                                    final expiry =
+                                        bloc.state.selectedNearExpiry;
+                                    final qty =
+                                        int.tryParse(qtyController.text) ?? 0;
+
+                                    if (current != null &&
+                                        unit != null &&
+                                        expiry != null &&
+                                        qty > 0) {
+                                      bloc.add(
+                                        ApproveItemEvent(
+                                          projectId: projects.id.toString(),
+                                          projectName: projects.name.toString(),
+                                          barcode: scanController.text,
+                                          unit: unit,
+                                          qty: qty,
+                                          nearExpiry: expiry,
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    bloc.add(const ResetFormEvent());
+                                    scanController.clear();
+                                    nameController.clear();
+                                    qtyController.clear();
+                                  }
+
+                                  final suggestions = bloc.state.suggestions;
+                                  if (suggestions.isEmpty) return;
+
+                                  if (suggestions.length == 1) {
+                                    bloc.add(
+                                      ProductChosenFromSearch(
+                                        suggestions.first,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  final normalized = value.replaceAll(' ', '');
+                                  final exact = suggestions.where(
+                                    (p) => p.barcodes.any(
+                                      (b) =>
+                                          b.replaceAll(' ', '') == normalized,
+                                    ),
+                                  );
+
+                                  if (exact.length == 1) {
+                                    bloc.add(
+                                      ProductChosenFromSearch(exact.first),
+                                    );
+                                  }
+                                },
+
                                 decoration: InputDecoration(
                                   fillColor: Colors.white,
                                   filled: true,

@@ -2,6 +2,7 @@ import 'package:apg_scanner/presentation/login_page/login_block/login_bloc.dart'
 import 'package:apg_scanner/presentation/login_page/login_block/login_event.dart';
 import 'package:apg_scanner/presentation/login_page/widgets/auth_gate_widget.dart';
 import 'package:apg_scanner/presentation/login_page/widgets/login_widget.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -48,7 +49,7 @@ class LoginPage extends StatelessWidget {
               Positioned.fill(
                 child: Image.asset(
                   "assets/images/background.png",
-                  fit: BoxFit.cover,
+                  fit: kIsWeb ? BoxFit.fill : BoxFit.contain,
                 ),
               ),
 

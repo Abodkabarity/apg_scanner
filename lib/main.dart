@@ -1,5 +1,6 @@
 import 'package:apg_scanner/presentation/add_project/project_bloc/project_bloc.dart';
 import 'package:apg_scanner/presentation/login_page/login_block/login_bloc.dart';
+import 'package:apg_scanner/presentation/login_page/widgets/auth_gate_widget.dart';
 import 'package:apg_scanner/splash_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -64,12 +65,12 @@ class APGScanner extends StatelessWidget {
         BlocProvider<ProjectBloc>(create: (_) => getIt<ProjectBloc>()),
       ],
       child: ScreenUtilInit(
-        designSize: const Size(390, 844),
+        designSize: kIsWeb ? const Size(1440, 900) : const Size(390, 844),
         minTextAdapt: true,
         builder: (context, child) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: SplashScreen(),
+            home: kIsWeb ? AuthGate() : SplashScreen(),
           );
         },
       ),
