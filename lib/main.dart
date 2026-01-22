@@ -1,6 +1,7 @@
 import 'package:apg_scanner/presentation/add_project/project_bloc/project_bloc.dart';
 import 'package:apg_scanner/presentation/login_page/login_block/login_bloc.dart';
 import 'package:apg_scanner/splash_screen.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -22,14 +23,29 @@ Future<void> main() async {
   Hive.registerAdapter(StockItemModelAdapter());
   Hive.registerAdapter(NearExpiryItemModelAdapter());
 
-  // Load .env
-  await dotenv.load(fileName: ".env");
+  // Load .env (Mobile/Desktop only)
+  if (!kIsWeb) {
+    await dotenv.load(fileName: ".env");
+  }
 
-  // Supabase
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-  );
+  // Supabase (Web uses --dart-define, others use .env)
+  final supabaseUrl = kIsWeb
+      ? const String.fromEnvironment('SUPABASE_URL')
+      : dotenv.env['SUPABASE_URL'] ?? '';
+
+  final supabaseAnonKey = kIsWeb
+      ? const String.fromEnvironment('SUPABASE_ANON_KEY')
+      : dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+
+  if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+    throw Exception(
+      'Supabase URL/AnonKey missing. '
+      'Web: pass --dart-define=SUPABASE_URL=... and --dart-define=SUPABASE_ANON_KEY=... '
+      'Mobile/Desktop: ensure .env contains SUPABASE_URL and SUPABASE_ANON_KEY.',
+    );
+  }
+
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
 
   // Dependency Injection
   setupGetIt();
