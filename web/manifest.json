@@ -1,6 +1,6 @@
 {
-    "name": "apg_scanner",
-    "short_name": "apg_scanner",
+    "name": "APG Scanner",
+    "short_name": "APG Scanner",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
