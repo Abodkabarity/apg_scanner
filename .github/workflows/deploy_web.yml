@@ -25,7 +25,7 @@ jobs:
           channel: stable
 
       - run: flutter pub get
-      - run: flutter build web --release --base-href /apg_scanner/ --pwa-strategy=none
+      - run: flutter build web --release --base-href /apg_scanner/ --pwa-strategy=none --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
