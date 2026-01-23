@@ -25,7 +25,6 @@ jobs:
           channel: stable
 
       - run: flutter pub get
-
       - run: flutter build web --release --base-href /apg_scanner/ --pwa-strategy=none
 
       - uses: actions/upload-pages-artifact@v3
@@ -35,6 +34,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
     steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v4
